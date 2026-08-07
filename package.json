@@ -1,13 +1,13 @@
 {
     "devDependencies": {
-        "typescript": "^5.7.3",
-        "tsup": "^8.5.1"
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.3"
     },
     "scripts": {
-        "build": "npx tsup src/main.ts --format esm,cjs,iife --dts --clean --global-name TEMPLATE",
+        "build": "npx tsup src/main.ts --format esm,cjs,iife --dts --clean --global-name Infill",
         "demo": "cd ./demo && php -S localhost:8001"
     },
-    "name": "template",
+    "name": "@theblackswitch/infill",
     "version": "0.1.0",
     "type": "module",
     "main": "./dist/main.ts",
@@ -21,12 +21,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/..."
+        "url": "https://github.com/TheBlackSwitch/infill"
     },
     "bugs": {
-        "url": "https://github.com/.../issues"
+        "url": "https://github.com/TheBlackSwitch/infill/issues"
     },
-    "homepage": "",
+    "homepage": "https://theblackswitch.com/libraries/infill",
     "files": [
         "dist"
     ],
@@ -34,6 +34,15 @@
     "publishConfig": {
         "access": "public"
     },
-    "keywords": [],
-    "description": ""
+    "keywords": [
+        "markdown",
+        "parser",
+        "editor",
+        "live",
+        "in-text"
+    ],
+    "description": "A live in-text markdown editor powered by YAMP.",
+    "dependencies": {
+        "@theblackswitch/yamp": "^0.1.0"
+    }
 }
