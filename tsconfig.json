@@ -6,8 +6,9 @@
         // "outDir": "./dist",
         // Environment Settings
         // See also https://aka.ms/tsconfig/module
-        "module": "esnext",
-        "target": "esnext",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "target": "ESNext",
         "types": [],
         // For nodejs:
         // "lib": ["esnext"],

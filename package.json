@@ -1,7 +1,8 @@
 {
     "devDependencies": {
+        "@types/prismjs": "^1.26.6",
         "tsup": "^8.5.1",
-        "typescript": "^5.7.3"
+        "typescript": "^5.9.3"
     },
     "scripts": {
         "build": "npx tsup src/main.ts --format esm,cjs,iife --dts --clean --global-name Infill",
@@ -43,6 +44,8 @@
     ],
     "description": "A live in-text markdown editor powered by YAMP.",
     "dependencies": {
-        "@theblackswitch/yamp": "^0.1.0"
+        "@theblackswitch/yamp": "^0.1.2",
+        "dompurify": "^3.4.13",
+        "prismjs": "^1.30.0"
     }
 }

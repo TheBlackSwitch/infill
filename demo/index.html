@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Theblackswitch - Infill playground</title>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://theblackswitch.com/assets/css/common.css?v=4">
+    <link rel="stylesheet" href="./yamp_playground.css?v=1">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="./infill/styles/main.css">
+    
+    <meta name="author" content="theblackswitch">
+    <meta name="description" content="JS Library: Infill, a live in-text markdown editor .">
+    <meta name="keywords" content="theblackswitch, The Black Switch, js, markdown, library, javascript, editor, yet another markdown parser, yamp">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body class="no_scroll">
+    <div class="loader" id="loader">
+        <div class="loader_circle">
+            <img src="https://theblackswitch.com/assets/images/gear.png" class="gear_1">
+            <img src="https://theblackswitch.com/assets/images/gear.png" class="gear_2">
+            <img src="https://theblackswitch.com/assets/images/gear.png" class="gear_3">
+        </div>
+        <h3 class="loader_text">Loading...</h3>
+    </div>
+    <div class="sidebar_container focus_mode_hidden"  id="sidebar">
+        <div class="sidebar">
+            <div class="sidebar_contents">
+                <div class="sidebar_menu home_button">
+                    <h3 class="menu_title"><a href="https://theblackswitch.com/home.html" class="menu_button"><i class="fa-solid fa-house fa-2xl fa-fw"></i></a></h3>
+                </div>
+                <div class="line"></div>
+                <div class="sidebar_menu">
+                    <h3 class="menu_title"><i class="fa-regular fa-file fa-2xl fa-fw"></i>Contents</h3>
+                </div>
+                <div class="line"></div>
+                <div class="sidebar_menu">
+                    <h3 class="menu_title"><i class="fa-solid fa-cloud fa-2xl fa-fw"></i> Socials</h3>
+                    <ul class="sidebar_list">
+                        <li>
+                            <a href="https://buymeacoffee.com/theblackswitch" target="_blank" class="link">
+                                <i class="fa-solid fa-mug-saucer"></i>
+                                <i class="hide_sidebar"> Buy Me a coffee</i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.curseforge.com/members/theblackswitch/projects?page=1&pageSize=20&sortBy=TotalDownloads&sortOrder=Desc" target="_blank" class="link">
+                                <img src="https://theblackswitch.com/assets/images/logo/curseforge.png" class="menu_icon_image">
+                                <i class="hide_sidebar"> Curseforge</i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/TheBlackSwitch" target="_blank" class="link">
+                                <i class="fa-brands fa-github"></i>
+                                <i class="hide_sidebar"> Github</i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://modrinth.com/user/theblackswitch" target="_blank" class="link">
+                                <img src="../assets/images/logo/modrinth.png" class="menu_icon_image">
+                                <i class="hide_sidebar"> Modrinth</i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.planetminecraft.com/member/theblackswitch/" target="_blank" class="link">
+                                <i class="fa-solid fa-earth-americas"></i>
+                                <i class="hide_sidebar"> Planet MC</i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.youtube.com/channel/UCkjLf5Xth_5fT1ByJifDFPA" target="_blank" class="link">
+                                <i class="fa-brands fa-youtube"></i>
+                                <i class="hide_sidebar"> Youtube</i>
+                            </a>
+                        </li>
+                        <!--<li><a href="https://www.instagram.com/theblackswitch01/" target="_blank" class="link"><i
+                                    class="fa-brands fa-instagram"></i><i class="hide_sidebar"> Instagram</i></a></li>-->
+                        <!--<li><a href="https://www.twitch.tv/theblackswitch" target="_blank"><i
+                                    class="fa-brands fa-twitch"></i><i class="hide_sidebar"> Twitch</i></a></li>-->
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar_icon" id="sidebar_icon">
+            <i class="fa-solid fa-bars fa-2xl plus"></i>
+            <i class="fa-solid fa-minus fa-2xl minus"></i>
+        </div>
+    </div>
+    <div class="main" id="main" onclick="">
+        <div class="header focus_mode_hidden">
+            <img src="https://theblackswitch.com/assets/images/theblackswitch-long.jpg" class="logo-top">
+        </div>
+        <div class="scroll_to_top_button focus_mode_hidden hide action-scroll_to_top" id="scroll_to_top">
+            <i class="fa-solid fa-arrow-up fa-2xl"></i>
+        </div>
+        <div class="page">
+            <div class="generic_container" id="editor-wrapper">
+                
+            </div>   
+        </div>
+        <div class="footer focus_mode_hidden">
+            <img src="https://theblackswitch.com/assets/images/theblackswitch-long.jpg" class="logo-bottom">
+            <p>theblackswitch.com &#169; <span id="curr_year"></span> by theblackswitch</p>
+        </div>
+    </div>
+
+    <script src="https://theblackswitch.com/assets/js/lib.js?v=4"></script>
+    <script type="module" src="./infill_playground.js"></script>
+    <script type="module" src="./common.js?v=4"></script>
+
+    <script>
+        
+    </script>
+
+    <script src="https://kit.fontawesome.com/67e2f1a364.js" crossorigin="anonymous"></script>
+</body>
+<html>

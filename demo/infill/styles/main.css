@@ -1,0 +1,465 @@
+/* ========================================================================================================================================== //
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+//                                                          DEFAULT THEME                                                                        
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+// ========================================================================================================================================== */
+
+:root {
+    --infill-text-color: #aaa;
+
+    --infill-tooltip-color: #212121;
+    --infill-tooltip-border: 1px solid #454545;
+    --infill-tooltip-text-color: #aaa;
+
+    --infill-nav-background-color: #424242;
+    --infill-nav-border-radius: 5px 5px 0px 0px;
+    --infill-nav-block-separator-color: #3A3A3A;
+    
+    --infill-nav-gutter-color: #3A3A3A;
+    --infill-nav-slider-thumb-color: #aaa;
+
+    --infill-nav-toggle-active-color: #00da95;
+    --infill-nav-toggle-inactive-color: #009166;
+
+    --infill-nav-button-color: #535353;
+    --infill-nav-button-hover-color: #606060;
+    --infill-nav-button-hover-zoom: 1.05;
+    --infill-nav-button-active-zoom: 1.075;
+    --infill-nav-button-border-radius: 3px;
+
+    --infill-editor-background-color: #323232;
+    --infill-editor-border-radius: 0px 0px 5px 5px;
+
+    --infill-html-highlight-color: #aaa;
+}
+
+/* ========================================================================================================================================== //
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+//                                                            UTILITIES                                                                        
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+// ========================================================================================================================================== */
+
+/* ============================== //
+//  Tooltips                              
+// ============================== */
+
+.infill-tooltip {
+    position: relative;
+}
+
+.infill-tooltip::before {
+    content: attr(data-infill-tooltip);
+    visibility: hidden;
+    width: auto;
+    background-color: var(--infill-tooltip-color);
+    color: var(--infill-tooltip-text-color);
+    border: var(--infill-tooltip-border);
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    display: block;
+    position: absolute;
+    z-index: 8;
+    bottom: 100%;
+    opacity: 0;
+    left: 50%;
+    transform: translate(-50%, -9px);
+    text-wrap: nowrap;
+}
+
+.infill-tooltip.infill-align-left::before {
+    transform: calc(-100% + 15px);
+}
+
+.infill-tooltip.infill-align-right::before {
+    transform: translate(-15px, -9px);
+}
+
+.infill-tooltip::after {
+    content: "";
+    width: 0px;
+    height: 0px;
+    display: block;
+    position: absolute;
+    border-top: 7px solid var(--infill-tooltip-color);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    z-index: 8;
+    margin-left: 50%;
+    transform: translate(-50%);
+    top: -10px;
+    visibility: visible;
+    opacity: 0;
+}
+
+.infill-tooltip:hover::before {
+    visibility: visible;
+    animation: tooltip_visible forwards 10s;
+}
+
+.infill-tooltip:hover::after {
+    visibility: visible;
+    animation: tooltip_visible forwards 10s;
+}
+
+@keyframes tooltip_visible {
+    0% {
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 0;
+    }
+
+    13% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+
+/* ========================================================================================================================================== //
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+//                                                           EDITOR NAV                                                                        
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+// ========================================================================================================================================== */
+
+.infill-editor-nav {
+    background-color: var(--infill-nav-background-color);
+    border-radius: var(--infill-nav-border-radius);
+    display: grid;
+    grid-template-columns: 195px 195px 143px auto 200px 60px;
+    padding: 3px;
+}
+
+.infill-editor-nav-block {
+    padding: 2px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-right: 15px;
+    flex-wrap: wrap;
+    gap: 2px;
+    border-right: 2px solid var(--infill-nav-block-separator-color);
+}
+
+.infill-nav-btn {
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--infill-nav-button-color);
+    border-radius: var(--infill-nav-button-border-radius);
+    transition: translation 0.3s, background-color 0.3s;
+    cursor: pointer;
+    user-select: none;
+}
+
+.infill-nav-btn:hover {
+    transform: scale(var(--infill-nav-button-hover-zoom));
+    transform: scale(var(--infill-nav-button-hover-zoom));
+    background-color: var(--infill-nav-button-hover-color);
+}
+
+.infill-nav-btn:active {
+    transform: scale(var(--infill-nav-button-active-zoom));
+}
+
+/* ============================== //
+//  Icons                              
+// ============================== */
+
+.infill-icon {
+    width: 0px;
+    height: 0px;
+}
+
+.infill-icon {
+    color: var(--infill-text-color);
+    background-color: var(--infill-text-color);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    display: block;
+    position: relative;
+    z-index: 1;
+    height: 1em;
+    width: 1em;
+}
+
+.infill-icon-blockquote {
+    mask-image: url('data:image/svg+xml,<svg width="210mm" height="210mm" viewBox="0 0 210 210" version="1.1" id="svg1" sodipodi:docname="blockquote.svg" inkscape:version="1.4.2 (f4327f4, 2025-05-13)" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview id="namedview1" pagecolor="%23505050" bordercolor="%23ffffff" borderopacity="1" inkscape:showpageshadow="0" inkscape:pageopacity="0" inkscape:pagecheckerboard="1" inkscape:deskcolor="%23505050" inkscape:document-units="mm" inkscape:zoom="1.0912949" inkscape:cx="434.80456" inkscape:cy="354.16641" inkscape:window-width="2560" inkscape:window-height="1506" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:window-maximized="1" inkscape:current-layer="layer1" /><defs id="defs1" /><g inkscape:label="Layer 1" inkscape:groupmode="layer" id="layer1"><g id="g15" transform="translate(5.8653718,-1.8636231)"><g id="g1" transform="matrix(0.96185805,0,0,0.96185805,3.9988677,4.0312765)"><rect style="fill:%23000000;stroke-width:0.269173" id="rect7" width="120.26893" height="15.358245" x="18.686666" y="54.272018" ry="7.6791224" /><rect style="fill:%23000000;stroke-width:0.262351" id="rect7-1" width="115.87316" height="15.14312" x="63.230915" y="96.659515" ry="7.5715599" /><rect style="fill:%23000000;stroke-width:0.265415" id="rect7-1-1" width="115.16022" height="15.594817" x="63.969749" y="141.96762" ry="7.7974086" /><rect style="fill:%23000000;fill-opacity:1;stroke-width:0.339926;stroke-dasharray:none" id="rect14" width="47.466751" height="12.827461" x="86.135323" y="48.354275" transform="rotate(45)" ry="6.4137306" /><rect style="fill:%23000000;fill-opacity:1;stroke-width:0.344215;stroke-dasharray:none" id="rect15" width="47.278259" height="12.989286" x="-95.817978" y="120.62408" transform="rotate(-45)" ry="6.494648" /></g></g></g></svg>');
+    transform: scale(1.5);
+}
+
+.infill-icon-codeblock {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3C!--%20Created%20with%20Inkscape%20(http%3A%2F%2Fwww.inkscape.org%2F)%20--%3E%3Csvg%20width%3D%22210mm%22%20height%3D%22210mm%22%20viewBox%3D%220%200%20210%20210%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22codeblock.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Adocument-units%3D%22mm%22%20inkscape%3Azoom%3D%221.0912949%22%20inkscape%3Acx%3D%22321.17808%22%20inkscape%3Acy%3D%22359.66447%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22layer1%22%20%2F%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Cg%20inkscape%3Alabel%3D%22Layer%201%22%20inkscape%3Agroupmode%3D%22layer%22%20id%3D%22layer1%22%3E%3Cg%20id%3D%22g15%22%20transform%3D%22translate(14.856795%2C-7.4272232)%22%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.290873%22%20id%3D%22rect7%22%20width%3D%22143.79602%22%20height%3D%2215%22%20x%3D%2218.392189%22%20y%3D%2254.272018%22%20ry%3D%227.5%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.290873%22%20id%3D%22rect7-3%22%20width%3D%22143.79602%22%20height%3D%2215%22%20x%3D%2218.0982%22%20y%3D%22155.58243%22%20ry%3D%227.5%22%20%2F%3E%3Cg%20id%3D%22g17%22%20transform%3D%22translate(-0.28337745%2C0.62319868)%22%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.339926%3Bstroke-dasharray%3Anone%22%20id%3D%22rect14%22%20width%3D%2247.466751%22%20height%3D%2212.827461%22%20x%3D%22126.31144%22%20y%3D%22-16.695736%22%20transform%3D%22rotate(45)%22%20ry%3D%226.4137306%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.344215%3Bstroke-dasharray%3Anone%22%20id%3D%22rect15%22%20width%3D%2247.278259%22%20height%3D%2212.989286%22%20x%3D%22-30.76796%22%20y%3D%22160.80019%22%20transform%3D%22rotate(-45)%22%20ry%3D%226.494648%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.339926%3Bstroke-dasharray%3Anone%22%20id%3D%22rect14-9%22%20width%3D%2247.466751%22%20height%3D%2212.827461%22%20x%3D%22-158.94731%22%20y%3D%22-45.773724%22%20transform%3D%22rotate(-135)%22%20ry%3D%226.4137306%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.344215%3Bstroke-dasharray%3Anone%22%20id%3D%22rect15-5%22%20width%3D%2247.278259%22%20height%3D%2212.989286%22%20x%3D%22-1.6899526%22%20y%3D%22-124.45855%22%20transform%3D%22rotate(135)%22%20ry%3D%226.494648%22%20%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    transform: scale(1.5);
+}
+
+.infill-icon-code {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3C!--%20Created%20with%20Inkscape%20(http%3A%2F%2Fwww.inkscape.org%2F)%20--%3E%3Csvg%20width%3D%22210mm%22%20height%3D%22210mm%22%20viewBox%3D%220%200%20210%20210%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22code.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Adocument-units%3D%22mm%22%20inkscape%3Azoom%3D%221.0912949%22%20inkscape%3Acx%3D%22459.54581%22%20inkscape%3Acy%3D%22476.95632%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22layer1%22%20%2F%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Cg%20inkscape%3Alabel%3D%22Layer%201%22%20inkscape%3Agroupmode%3D%22layer%22%20id%3D%22layer1%22%3E%3Cg%20id%3D%22g15%22%20transform%3D%22matrix(1.1195068%2C0%2C0%2C1.1195086%2C15.191846%2C-19.928314)%22%3E%3Cg%20id%3D%22g17%22%20transform%3D%22translate(-0.28336977%2C0.62319111)%22%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.339926%3Bstroke-dasharray%3Anone%22%20id%3D%22rect14%22%20width%3D%2247.466751%22%20height%3D%2212.827461%22%20x%3D%22135.33456%22%20y%3D%22-25.961319%22%20transform%3D%22rotate(45)%22%20ry%3D%226.4137306%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.344215%3Bstroke-dasharray%3Anone%22%20id%3D%22rect15%22%20width%3D%2247.278%22%20height%3D%2212.989286%22%20x%3D%22-21.502377%22%20y%3D%22169.82332%22%20ry%3D%226.494648%22%20transform%3D%22rotate(-45)%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.339926%3Bstroke-dasharray%3Anone%22%20id%3D%22rect14-9%22%20width%3D%2247.466751%22%20height%3D%2212.827461%22%20x%3D%22-135.19952%22%20y%3D%22-68.794159%22%20transform%3D%22rotate(-135)%22%20ry%3D%226.4137306%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.344215%3Bstroke-dasharray%3Anone%22%20id%3D%22rect15-5%22%20width%3D%2247.278259%22%20height%3D%2212.989286%22%20x%3D%2221.330475%22%20y%3D%22-100.71077%22%20transform%3D%22rotate(135)%22%20ry%3D%226.494648%22%20%2F%3E%3C%2Fg%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke-width%3A0.314148%3Bstroke-dasharray%3Anone%22%20id%3D%22rect18%22%20width%3D%2212.64%22%20height%3D%2290.347466%22%20x%3D%22119.16865%22%20y%3D%2211.230644%22%20ry%3D%226.3200002%22%20transform%3D%22rotate(30)%22%20%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    transform: scale(1.5);
+}
+
+.infill-icon-coloured {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3Csvg%20viewBox%3D%220%200%20640%20640%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22palette-solid-full.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Azoom%3D%221.9140625%22%20inkscape%3Acx%3D%22320%22%20inkscape%3Acy%3D%22320%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22svg1%22%20%2F%3E%3C!--!Font%20Awesome%20Free%207.3.1%20by%20%40fontawesome%20-%20https%3A%2F%2Ffontawesome.com%20License%20-%20https%3A%2F%2Ffontawesome.com%2Flicense%2Ffree%20Copyright%202026%20Fonticons%2C%20Inc.--%3E%3Cpath%20d%3D%22m%20492.91623%2C320%20c%200%2C0.60797%200%2C1.21593%200%2C1.82391%20-0.27021%2C24.65637%20-22.69739%2C41.4092%20-47.35378%2C41.4092%20H%20379.4293%20c%20-17.9012%2C0%20-32.42483%2C14.52362%20-32.42483%2C32.42484%200%2C2.29676%200.27021%2C4.52596%200.67552%2C6.68762%201.41859%2C6.89027%204.39086%2C13.51034%207.29558%2C20.19796%204.12066%2C9.32215%208.17377%2C18.57674%208.17377%2C28.37175%200%2C21.48144%20-14.59118%2C41.00389%20-36.07263%2C41.88206%20-2.36431%2C0.0675%20-4.72862%2C0.13511%20-7.16048%2C0.13511%20-95.51816%2C0%20-172.93246%2C-77.41429%20-172.93246%2C-172.93245%200%2C-95.51816%2077.48185%2C-172.93245%20173%2C-172.93245%2095.51816%2C0%20172.93246%2C77.41429%20172.93246%2C172.93245%20z%20M%20233.51756%2C341.61656%20C%20233.51756%2C329.65991%20223.85765%2C320%20211.901%2C320%20c%20-11.95667%2C0%20-21.61656%2C9.65991%20-21.61656%2C21.61656%200%2C11.95665%209.65989%2C21.61655%2021.61656%2C21.61655%2011.95665%2C0%2021.61656%2C-9.6599%2021.61656%2C-21.61655%20z%20m%200%2C-64.84967%20c%2011.95665%2C0%2021.61656%2C-9.6599%2021.61656%2C-21.61656%200%2C-11.95665%20-9.65991%2C-21.61656%20-21.61656%2C-21.61656%20-11.95667%2C0%20-21.61656%2C9.65991%20-21.61656%2C21.61656%200%2C11.95666%209.65989%2C21.61656%2021.61656%2C21.61656%20z%20m%20108.08277%2C-64.84968%20c%200%2C-11.95665%20-9.65989%2C-21.61655%20-21.61656%2C-21.61655%20-11.95665%2C0%20-21.61656%2C9.6599%20-21.61656%2C21.61655%200%2C11.95667%209.65991%2C21.61656%2021.61656%2C21.61656%2011.95667%2C0%2021.61656%2C-9.65989%2021.61656%2C-21.61656%20z%20M%20406.45%2C276.76689%20c%2011.95665%2C0%2021.61656%2C-9.6599%2021.61656%2C-21.61656%200%2C-11.95665%20-9.65991%2C-21.61656%20-21.61656%2C-21.61656%20-11.95665%2C0%20-21.61656%2C9.65991%20-21.61656%2C21.61656%200%2C11.95666%209.65991%2C21.61656%2021.61656%2C21.61656%20z%22%20id%3D%22path1%22%20style%3D%22stroke-width%3A0.675518%22%20%2F%3E%3C%2Fsvg%3E");
+    transform: scale(1.8);
+}
+
+.infill-icon-unordered-list {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3C!--%20Created%20with%20Inkscape%20(http%3A%2F%2Fwww.inkscape.org%2F)%20--%3E%3Csvg%20width%3D%22210mm%22%20height%3D%22210mm%22%20viewBox%3D%220%200%20210%20210%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22unordered-list.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Adocument-units%3D%22mm%22%20inkscape%3Azoom%3D%221.0912949%22%20inkscape%3Acx%3D%22247.87067%22%20inkscape%3Acy%3D%22288.18975%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22layer1%22%20%2F%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Cg%20inkscape%3Alabel%3D%22Layer%201%22%20inkscape%3Agroupmode%3D%22layer%22%20id%3D%22layer1%22%3E%3Cg%20id%3D%22g15%22%20transform%3D%22translate(6.9136086%2C3.4582558)%22%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.236696%22%20id%3D%22rect7-1%22%20width%3D%2295.219398%22%20height%3D%2215%22%20x%3D%2264.818031%22%20y%3D%2293.829025%22%20ry%3D%227.5%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.235967%22%20id%3D%22rect7-1-1%22%20width%3D%2294.63353%22%20height%3D%2215%22%20x%3D%2265.21804%22%20y%3D%22136.46236%22%20ry%3D%227.5%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.235967%22%20id%3D%22rect7-1-1-1%22%20width%3D%2294.63353%22%20height%3D%2215%22%20x%3D%2265.462288%22%20y%3D%2251.621132%22%20ry%3D%227.5%22%20inkscape%3Alabel%3D%22rect7-1-1-1%22%20%2F%3E%3Cellipse%20style%3D%22fill%3A%23000000%3Bstroke%3A%23000000%3Bstroke-width%3A1.62387%22%20id%3D%22path1%22%20cx%3D%2243.81942%22%20cy%3D%2259.195728%22%20rx%3D%226.6880689%22%20ry%3D%226.688067%22%20%2F%3E%3Cellipse%20style%3D%22fill%3A%23000000%3Bstroke%3A%23000000%3Bstroke-width%3A1.62387%22%20id%3D%22path1-2%22%20cx%3D%2243.81942%22%20cy%3D%22101.07497%22%20rx%3D%226.6880689%22%20ry%3D%226.688067%22%20%2F%3E%3Cellipse%20style%3D%22fill%3A%23000000%3Bstroke%3A%23000000%3Bstroke-width%3A1.62387%22%20id%3D%22path1-2-2%22%20cx%3D%2243.576969%22%20cy%3D%22143.66696%22%20rx%3D%226.6880689%22%20ry%3D%226.688067%22%20%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    transform: scale(1.5);
+}
+
+.infill-icon-ordered-list {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3C!--%20Created%20with%20Inkscape%20(http%3A%2F%2Fwww.inkscape.org%2F)%20--%3E%3Csvg%20width%3D%22210mm%22%20height%3D%22210mm%22%20viewBox%3D%220%200%20210%20210%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22ordered-list.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Adocument-units%3D%22mm%22%20inkscape%3Azoom%3D%220.77166202%22%20inkscape%3Acx%3D%22268.90011%22%20inkscape%3Acy%3D%22443.84717%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22layer1%22%20%2F%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Cg%20inkscape%3Alabel%3D%22Layer%201%22%20inkscape%3Agroupmode%3D%22layer%22%20id%3D%22layer1%22%3E%3Cg%20id%3D%22g15%22%20transform%3D%22translate(10.449844%2C3.4582558)%22%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.236696%22%20id%3D%22rect7-1%22%20width%3D%2295.219398%22%20height%3D%2215%22%20x%3D%2264.818031%22%20y%3D%2293.829025%22%20ry%3D%227.5%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.235967%22%20id%3D%22rect7-1-1%22%20width%3D%2294.63353%22%20height%3D%2215%22%20x%3D%2265.21804%22%20y%3D%22136.46236%22%20ry%3D%227.5%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bstroke-width%3A0.235967%22%20id%3D%22rect7-1-1-1%22%20width%3D%2294.63353%22%20height%3D%2215%22%20x%3D%2265.462288%22%20y%3D%2251.621132%22%20ry%3D%227.5%22%20inkscape%3Alabel%3D%22rect7-1-1-1%22%20%2F%3E%3Ctext%20xml%3Aspace%3D%22preserve%22%20style%3D%22font-style%3Anormal%3Bfont-variant%3Anormal%3Bfont-weight%3Abold%3Bfont-stretch%3Anormal%3Bfont-size%3A59.9722px%3Bline-height%3A0.9%3Bfont-family%3AArial%3B-inkscape-font-specification%3A%27Arial%20Bold%27%3Btext-align%3Astart%3Bwriting-mode%3Alr-tb%3Bdirection%3Altr%3Btext-anchor%3Astart%3Bfill%3A%23000000%3Bstroke%3A%23000000%3Bstroke-width%3A1.821%22%20x%3D%2235.335155%22%20y%3D%2299.224899%22%20id%3D%22text3%22%20transform%3D%22translate(-6.9136086%2C-3.4582558)%22%3E%3Ctspan%20sodipodi%3Arole%3D%22line%22%20id%3D%22tspan3%22%20style%3D%22font-style%3Anormal%3Bfont-variant%3Anormal%3Bfont-weight%3Abold%3Bfont-stretch%3Anormal%3Bfont-size%3A59.9722px%3Bline-height%3A0.9%3Bfont-family%3AArial%3B-inkscape-font-specification%3A%27Arial%20Bold%27%3Bstroke-width%3A1.821%22%20x%3D%2235.335155%22%20y%3D%2299.224899%22%3E1%3C%2Ftspan%3E%3Ctspan%20sodipodi%3Arole%3D%22line%22%20style%3D%22font-style%3Anormal%3Bfont-variant%3Anormal%3Bfont-weight%3Abold%3Bfont-stretch%3Anormal%3Bfont-size%3A59.9722px%3Bline-height%3A0.9%3Bfont-family%3AArial%3B-inkscape-font-specification%3A%27Arial%20Bold%27%3Bstroke-width%3A1.821%22%20x%3D%2235.335155%22%20y%3D%22153.19987%22%20id%3D%22tspan4%22%3E2%3C%2Ftspan%3E%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    transform: scale(1.5);
+}
+
+.infill-icon-link {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3Csvg%20viewBox%3D%220%200%20640%20640%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22link.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Azoom%3D%221.3534466%22%20inkscape%3Acx%3D%22451.80948%22%20inkscape%3Acy%3D%22285.56723%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22svg1%22%20%2F%3E%3C!--!Font%20Awesome%20Free%207.3.1%20by%20%40fontawesome%20-%20https%3A%2F%2Ffontawesome.com%20License%20-%20https%3A%2F%2Ffontawesome.com%2Flicense%2Ffree%20Copyright%202026%20Fonticons%2C%20Inc.--%3E%3Cpath%20d%3D%22m%20412.34758%2C207.6677%20c%20-11.65756%2C0%20-22.96399%2C3.16018%20-32.86591%2C8.91873%20-11.09574%2C-11.2362%20-24.01739%2C-20.64652%20-38.27333%2C-27.73938%2019.80383%2C-16.85432%2045.01506%2C-26.12418%2071.13924%2C-26.12418%2060.67552%2C0%20109.90416%2C49.1584%20109.90416%2C109.90415%200%2C29.14391%20-11.58735%2C57.09399%20-32.16365%2C77.67028%20l%20-49.9309%2C49.93091%20c%20-20.5763%2C20.57629%20-48.52637%2C32.16365%20-77.67028%2C32.16365%20-60.67551%2C0%20-109.90415%2C-49.15842%20-109.90415%2C-109.90417%200%2C-1.05338%200%2C-2.10679%200.0702%2C-3.16018%200.35114%2C-12.43005%2010.67441%2C-22.19151%2023.10446%2C-21.84037%2012.43006%2C0.35113%2022.19151%2C10.67439%2021.84037%2C23.10445%200%2C0.63203%200%2C1.26407%200%2C1.82588%200%2C35.88563%2029.0737%2C64.95932%2064.95933%2C64.95932%2017.20544%2C0%2033.70862%2C-6.81195%2045.928%2C-19.03132%20l%2049.93089%2C-49.9309%20c%2012.14915%2C-12.14915%2019.03133%2C-28.72256%2019.03133%2C-45.928%200%2C-35.88563%20-29.07368%2C-64.95932%20-64.95932%2C-64.95932%20z%20m%20-101.33654%2C54.28492%20c%20-1.33431%2C-0.5618%20-2.6686%2C-1.33429%20-3.86245%2C-2.17701%20-8.84851%2C-4.5647%20-18.96109%2C-7.16308%20-29.56527%2C-7.16308%20-17.20546%2C0%20-33.70862%2C6.81195%20-45.92801%2C19.03132%20l%20-49.93089%2C49.9309%20c%20-12.14915%2C12.14915%20-19.03133%2C28.72255%20-19.03133%2C45.928%200%2C35.88565%2029.0737%2C64.95933%2064.95933%2C64.95933%2011.58733%2C0%2022.89377%2C-3.08996%2032.79568%2C-8.84851%2011.09575%2C11.2362%2024.01739%2C20.64652%2038.34356%2C27.73938%20-19.80383%2C16.78408%20-44.94484%2C26.12418%20-71.13924%2C26.12418%20-60.67552%2C0%20-109.90416%2C-49.1584%20-109.90416%2C-109.90415%200%2C-29.14391%2011.58735%2C-57.09399%2032.16365%2C-77.67028%20l%2049.9309%2C-49.93091%20c%2020.5763%2C-20.57629%2048.52637%2C-32.16365%2077.67028%2C-32.16365%2060.81598%2C0%20109.90415%2C49.57978%20109.90415%2C110.18507%200%2C0.91295%200%2C1.82589%200%2C2.73883%20-0.2809%2C12.43005%20-10.60417%2C22.1915%20-23.03422%2C21.9106%20-12.43006%2C-0.28091%20-22.19151%2C-10.60417%20-21.9106%2C-23.03423%200%2C-0.56181%200%2C-1.05339%200%2C-1.6152%200%2C-23.66626%20-12.64074%2C-44.45324%20-31.46138%2C-55.90013%20z%22%20id%3D%22path1%22%20style%3D%22stroke-width%3A0.702264%22%20%2F%3E%3C%2Fsvg%3E");
+    transform: scale(1.5);
+}
+
+.infill-icon-image {
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3Csvg%20viewBox%3D%220%200%20640%20640%22%20version%3D%221.1%22%20id%3D%22svg1%22%20sodipodi%3Adocname%3D%22image-solid-full.svg%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Azoom%3D%221.9140625%22%20inkscape%3Acx%3D%22320%22%20inkscape%3Acy%3D%22320%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22svg1%22%20%2F%3E%3C!--!Font%20Awesome%20Free%207.3.1%20by%20%40fontawesome%20-%20https%3A%2F%2Ffontawesome.com%20License%20-%20https%3A%2F%2Ffontawesome.com%2Flicense%2Ffree%20Copyright%202026%20Fonticons%2C%20Inc.--%3E%3Cpath%20d%3D%22m%20195.07872%2C145.1102%20c%20-27.56076%2C0%20-49.96852%2C22.40776%20-49.96852%2C49.96852%20v%20249.84256%20c%200%2C27.56076%2022.40776%2C49.96852%2049.96852%2C49.96852%20h%20249.84256%20c%2027.56076%2C0%2049.96852%2C-22.40776%2049.96852%2C-49.96852%20V%20195.07872%20c%200%2C-27.56076%20-22.40776%2C-49.96852%20-49.96852%2C-49.96852%20z%20m%2049.96851%2C62.46064%20c%2020.69009%2C0%2037.47638%2C16.78631%2037.47638%2C37.47639%200%2C20.69009%20-16.78629%2C37.47638%20-37.47638%2C37.47638%20-20.69008%2C0%20-37.47639%2C-16.78629%20-37.47639%2C-37.47638%200%2C-20.69008%2016.78631%2C-37.47639%2037.47639%2C-37.47639%20z%20m%20112.42916%2C87.4449%20c%206.55836%2C0%2012.5702%2C3.43534%2016.00553%2C8.97872%20l%2068.70671%2C112.42915%20c%203.51341%2C5.77762%203.66956%2C13.03866%200.39038%2C18.97242%20-3.27918%2C5.93377%20-9.60333%2C9.52525%20-16.39592%2C9.52525%20H%20213.81691%20c%20-6.94875%2C0%20-13.42904%2C-3.90379%20-16.63015%2C-10.07178%20-3.2011%2C-6.16799%20-2.73265%2C-13.66326%201.24922%2C-19.3628%20l%2043.72244%2C-62.46063%20c%203.51342%2C-4.99685%209.21295%2C-7.96374%2015.38094%2C-7.96374%206.16799%2C0%2011.86752%2C2.96689%2015.38093%2C7.96374%20l%2020.61202%2C29.51265%2047.93853%2C-78.46619%20c%203.43534%2C-5.54337%209.44718%2C-8.97871%2016.00555%2C-8.97871%20z%22%20id%3D%22path1%22%20style%3D%22stroke-width%3A0.780758%22%20%2F%3E%3C%2Fsvg%3E");
+    transform: scale(1.5);
+}
+
+/* ============================== //
+//  Slider                              
+// ============================== */
+
+.infill-slider-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 2px solid var(--infill-nav-block-separator-color);
+}
+
+.infill-slider {
+    appearance: none;
+    position: relative;
+    width: 70%;
+    background: fixed var(--infill-nav-gutter-color);
+    height: 6px;
+    border-radius: 3px;
+    display: inline;
+    cursor: pointer;
+}
+
+.infill-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: fixed var(--infill-nav-slider-thumb-color);
+    border-radius: 6px;
+}
+
+.infill-slider::-moz-range-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: fixed var(--infill-nav-slider-thumb-color);
+    border-radius: 6px;
+}
+
+.infill-slider::before {
+    content: "";
+    color: var(--infill-nav-slider-thumb-color);
+    background-color: var(--infill-nav-slider-thumb-color);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3C!--%20Created%20with%20Inkscape%20(http%3A%2F%2Fwww.inkscape.org%2F)%20--%3E%3Csvg%20width%3D%22210mm%22%20height%3D%22210mm%22%20viewBox%3D%220%200%20210%20210%22%20version%3D%221.1%22%20id%3D%22svg1%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20sodipodi%3Adocname%3D%22zoom-out.svg%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Adocument-units%3D%22mm%22%20inkscape%3Azoom%3D%221.0912949%22%20inkscape%3Acx%3D%22401.81623%22%20inkscape%3Acy%3D%22378.90767%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22layer1%22%20%2F%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Cg%20inkscape%3Alabel%3D%22Layer%201%22%20inkscape%3Agroupmode%3D%22layer%22%20id%3D%22layer1%22%3E%3Cg%20id%3D%22g3%22%20transform%3D%22matrix(1.2105491%2C0%2C0%2C1.2105491%2C-39.172742%2C-5.6269879)%22%3E%3Cellipse%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A0%3Bstroke%3A%23000000%3Bstroke-width%3A14%3Bstroke-dasharray%3Anone%22%20id%3D%22path1%22%20cx%3D%22132.79886%22%20cy%3D%2278.166214%22%20rx%3D%2238.025017%22%20ry%3D%2238.02457%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke%3A%23000000%3Bstroke-width%3A0%3Bstroke-dasharray%3Anone%3Bstroke-opacity%3A0%22%20id%3D%22rect2%22%20width%3D%2260%22%20height%3D%2215%22%20x%3D%22-60%22%20y%3D%22140.99243%22%20ry%3D%220%22%20rx%3D%227.5%22%20transform%3D%22rotate(-45)%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke%3A%23000000%3Bstroke-width%3A0%3Bstroke-dasharray%3Anone%3Bstroke-opacity%3A0%22%20id%3D%22rect3%22%20width%3D%2240%22%20height%3D%2215%22%20x%3D%22112.80576%22%20y%3D%2270.117867%22%20rx%3D%227.5%22%20%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    position: absolute;
+    display: inline;
+    top: 2px;
+    left: -25px;
+    width: 20px;
+    height: 20px;
+    transform: translate(0px, -50%);
+}
+
+.infill-slider::after {
+    content: "";
+    color: var(--infill-nav-slider-thumb-color);
+    background-color: var(--infill-nav-slider-thumb-color);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    mask-image: url("data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%20standalone%3D%22no%22%3F%3E%3C!--%20Created%20with%20Inkscape%20(http%3A%2F%2Fwww.inkscape.org%2F)%20--%3E%3Csvg%20width%3D%22210mm%22%20height%3D%22210mm%22%20viewBox%3D%220%200%20210%20210%22%20version%3D%221.1%22%20id%3D%22svg1%22%20inkscape%3Aversion%3D%221.4.2%20(f4327f4%2C%202025-05-13)%22%20sodipodi%3Adocname%3D%22zoom-in.svg%22%20xmlns%3Ainkscape%3D%22http%3A%2F%2Fwww.inkscape.org%2Fnamespaces%2Finkscape%22%20xmlns%3Asodipodi%3D%22http%3A%2F%2Fsodipodi.sourceforge.net%2FDTD%2Fsodipodi-0.dtd%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20xmlns%3Asvg%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Csodipodi%3Anamedview%20id%3D%22namedview1%22%20pagecolor%3D%22%23505050%22%20bordercolor%3D%22%23ffffff%22%20borderopacity%3D%221%22%20inkscape%3Ashowpageshadow%3D%220%22%20inkscape%3Apageopacity%3D%220%22%20inkscape%3Apagecheckerboard%3D%221%22%20inkscape%3Adeskcolor%3D%22%23505050%22%20inkscape%3Adocument-units%3D%22mm%22%20inkscape%3Azoom%3D%221.0912949%22%20inkscape%3Acx%3D%22354.16641%22%20inkscape%3Acy%3D%22382.57304%22%20inkscape%3Awindow-width%3D%222560%22%20inkscape%3Awindow-height%3D%221506%22%20inkscape%3Awindow-x%3D%22-11%22%20inkscape%3Awindow-y%3D%22-11%22%20inkscape%3Awindow-maximized%3D%221%22%20inkscape%3Acurrent-layer%3D%22layer1%22%20%2F%3E%3Cdefs%20id%3D%22defs1%22%20%2F%3E%3Cg%20inkscape%3Alabel%3D%22Layer%201%22%20inkscape%3Agroupmode%3D%22layer%22%20id%3D%22layer1%22%3E%3Cg%20id%3D%22g3%22%20transform%3D%22matrix(1.2105491%2C0%2C0%2C1.2105491%2C-39.172742%2C-5.6269879)%22%3E%3Cellipse%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A0%3Bstroke%3A%23000000%3Bstroke-width%3A14%3Bstroke-dasharray%3Anone%22%20id%3D%22path1%22%20cx%3D%22132.79886%22%20cy%3D%2278.166214%22%20rx%3D%2238.025017%22%20ry%3D%2238.02457%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke%3A%23000000%3Bstroke-width%3A0%3Bstroke-dasharray%3Anone%3Bstroke-opacity%3A0%22%20id%3D%22rect2%22%20width%3D%2260%22%20height%3D%2215%22%20x%3D%22-60%22%20y%3D%22140.99243%22%20ry%3D%220%22%20rx%3D%227.5%22%20transform%3D%22rotate(-45)%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke%3A%23000000%3Bstroke-width%3A0%3Bstroke-dasharray%3Anone%3Bstroke-opacity%3A0%22%20id%3D%22rect3%22%20width%3D%2240%22%20height%3D%2215%22%20x%3D%22112.80576%22%20y%3D%2270.117867%22%20rx%3D%227.5%22%20%2F%3E%3Crect%20style%3D%22fill%3A%23000000%3Bfill-opacity%3A1%3Bstroke%3A%23000000%3Bstroke-width%3A0%3Bstroke-dasharray%3Anone%3Bstroke-opacity%3A0%22%20id%3D%22rect5%22%20width%3D%2240%22%20height%3D%2215%22%20x%3D%2257.617867%22%20y%3D%22-140.30576%22%20rx%3D%227.5%22%20transform%3D%22rotate(90)%22%20%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    position: absolute;
+    display: inline;
+    top: 2px;
+    right: -25px;
+    width: 20px;
+    height: 20px;
+    transform: translate(0px, -50%);
+}
+
+/* ============================== //
+//  Toggle                              
+// ============================== */
+
+.infill-toggle-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.infill-toggle-check {
+    position: absolute;
+    display: inline;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.infill-toggle-gutter {
+    height: 8px;
+    width: 30px;
+    border-radius: 2px;
+    background-color: var(--infill-nav-gutter-color);
+    pointer-events: none;
+}
+
+.infill-toggle-gripper {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: var(--infill-nav-toggle-inactive-color);
+    border-radius: 2px;
+    transform: translate(-10px);
+    transition: transform 0.3s cubic-bezier(.43,0,.26,1.6), background-color 0.3s;
+    pointer-events: none;
+}
+
+.infill-toggle-wrapper:has(.infill-toggle-check:checked) .infill-toggle-gripper {
+    transform: translate(10px);
+    background-color: var(--infill-nav-toggle-active-color);
+}
+
+/* ========================================================================================================================================== //
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+//                                                               EDITOR                                                                        
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+// ========================================================================================================================================== */
+
+.infill-editor-wrapper {
+    display: grid;
+    grid-template-rows: max-content auto;
+}
+
+.infill-editor {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.infill-editor-input {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    resize: none;
+    opacity: 0;
+}
+
+.infill-editor-display {
+    position: absolute;
+    display: block;
+    width: calc(100% - 18px);
+    height: calc(100% - 18px);
+    top: 0px;
+    left: 0px;
+    border-left: 4px solid var(--infill-nav-background-color);
+    border-right: 4px solid var(--infill-nav-background-color);
+    border-bottom: 4px solid var(--infill-nav-background-color);
+    border-radius: var(--infill-editor-border-radius);
+    padding: 5px;
+    background-color: var(--infill-editor-background-color);
+}
+
+/* ============================== //
+//  Cursor                              
+// ============================== */
+
+.infill-editor-cursor {
+    width: 0px;
+    height: 1em;
+    min-height: 16px;
+    pointer-events: none;
+}
+
+.infill-editor .infill-editor-cursor::after {
+    content: '';
+    height: 1em;
+    width: 1px;
+    visibility: hidden;
+    position: absolute;
+    animation: infinite cursor-blink 1s;
+    background-color: #aaa;
+}
+
+.infill-editor:focus-within .infill-editor-cursor::after {
+    visibility: visible;
+    opacity: 1.0;
+}
+
+.infill-editor-cursor.infill-cursor-force-mark::after {
+    opacity: 1.0 !important;
+}
+
+@keyframes cursor-blink {
+    0% {
+        opacity: 1.0;
+    }
+    49.9% {
+        opacity: 1.0;
+    }
+    50.0% {
+        opacity: 0.0;
+    }
+    100% {
+        opacity: 0.0;
+    }
+}
+
+
+/* ========================================================================================================================================== //
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+//                                                       GENERATED HTML STYLING                                                                        
+// ------------------------------------------------------------------------------------------------------------------------------------------ //
+// ========================================================================================================================================== */
+
+.infill-editor-wrapper mark {
+    background-color: var(--infill-html-highlight-color);
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.infill-editor-wrapper p {
+    margin-top: 0px;
+    line-break: loose;
+    position: relative;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    margin-bottom: 0px;
+}
