@@ -23,6 +23,7 @@ interface options {
         zoom?: boolean        
     },
     enabled_features?: parsers,
+    keyboard_shortcuts_enabled?: boolean,
 
     [key: string]: any;
 }
@@ -31,7 +32,7 @@ declare const default_options: options;
 declare class Editor {
     #private;
     constructor(parent_element: HTMLElement, width?: string, height?: string, options?: options);
-    set_cursor(position: number): void;
+    set_cursor(position: number, no_focus?: boolean): void;
 }
 
 export { Editor, default_options };

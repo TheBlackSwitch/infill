@@ -380,6 +380,7 @@
     border: none;
     resize: none;
     opacity: 0;
+    user-select: none;
 }
 
 .infill-editor-display {
@@ -395,6 +396,30 @@
     border-radius: var(--infill-editor-border-radius);
     padding: 5px;
     background-color: var(--infill-editor-background-color);
+    cursor: text;
+}
+
+/* ============================== //
+//  Disabling                              
+// ============================== */
+
+.infill-parsing-disabled .infill-editor-display {
+    display: none;
+}
+
+.infill-parsing-disabled .infill-editor-input {
+    border-left: 4px solid var(--infill-nav-background-color);
+    border-right: 4px solid var(--infill-nav-background-color);
+    border-bottom: 4px solid var(--infill-nav-background-color);
+    width: calc(100% - 18px);
+    height: calc(100% - 18px);
+    opacity: 1;
+    padding: 5px;
+    background-color: var(--infill-editor-background-color);
+    color: var(--infill-text-color);
+    outline: none;
+    font: inherit;
+    user-select: auto;
 }
 
 /* ============================== //

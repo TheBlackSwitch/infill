@@ -23,6 +23,7 @@ export interface options {
         zoom?: boolean        
     },
     enabled_features?: parsers,
+    keyboard_shortcuts_enabled?: boolean,
 
     [key: string]: any;
 }
