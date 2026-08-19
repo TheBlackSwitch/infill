@@ -1,3 +1,2 @@
-# VERY MUCH WORK IN PROGRES
-Like literally
-this repo is currently completely empty :P
+# VERY MUCH WORK IN PROGRESS
+this is taking so loooong :P
