@@ -1,13 +1,19 @@
+// As you can see, I'm still learning how I can split my code across multiple files :/
+
+
 // ==========================================================================================================================================
 // ------------------------------------------------------------------------------------------------------------------------------------------
 //                                                              IMPORTS                                                                       
 // ------------------------------------------------------------------------------------------------------------------------------------------
 // ==========================================================================================================================================
 
+import './utils';
 import type { options } from "./public_types";
 import * as YAMP from "@theblackswitch/yamp";
 import './prismjs_highlight/mcfunction';
 import DOMPurify from 'dompurify'
+import { cursor_pos_from_point } from './utils';
+import { EditorSelection } from './selection';
 
 // ==========================================================================================================================================
 // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -65,6 +71,7 @@ export class Editor {
     #editor: HTMLElement;
     #input: HTMLTextAreaElement;
     #text_display: HTMLElement;
+    #selection_mask: HTMLElement;
     #slider: HTMLInputElement;
     #toggle_check: HTMLInputElement;
 
@@ -209,12 +216,15 @@ export class Editor {
         this.#editor.appendChild(this.#input);
 
         this.#text_display = document.createElement('div');
-        this.#text_display.classList.add('infill-editor-display')
-        this.#text_display.addEventListener('pointerdown', (e) => this.#editor_mouse_down(e));
-        this.#text_display.addEventListener('pointerleave', (e) => this.#editor_mouse_leave(e));
+        this.#text_display.classList.add('infill-editor-display');
         this.#text_display.addEventListener('pointermove', (e) => this.#editor_mouse_move(e));
-        this.#text_display.addEventListener('pointerup', (e) => this.#editor_mouse_up(e));
+        document.addEventListener('pointerdown', (e) => this.#editor_mouse_down(e));
+        document.addEventListener('pointerup', (e) => this.#editor_mouse_up(e));
         this.#editor.appendChild(this.#text_display);
+
+        this.#selection_mask = document.createElement('div');
+        this.#selection_mask.classList.add('infill-editor-selection-mask');
+        this.#editor.appendChild(this.#selection_mask);
 
         // Events
         document.addEventListener('keydown', (e) => this.#on_key_down(e));
@@ -249,15 +259,15 @@ export class Editor {
         let after = "";
         let inside = "";
 
-        if(window.getSelection()?.toString()) {
+        console.log(this.#selection);
+        
+        if(this.#selection !== null && this.#selection.visible) {
+            const start = this.#map_cursor_pos(this.#selection.lo);
+            const end = this.#map_cursor_pos(this.#selection.hi);
 
-            const selection = this.#get_selection();
-
-            if(selection === null) return;
-
-            before = this.#input.value.slice(0, this.#last_parse.char_map.absolute_map[selection.start]);
-            inside = this.#input.value.slice(this.#last_parse.char_map.absolute_map[selection.start], this.#last_parse.char_map.absolute_map[selection.end]);
-            after = this.#input.value.slice(this.#last_parse.char_map.absolute_map[selection.end]);
+            before = this.#input.value.slice(0, start);
+            inside = this.#input.value.slice(start, end);
+            after = this.#input.value.slice(end);
             
         } else {
             const cursor_pos = this.#input.selectionStart;
@@ -285,11 +295,11 @@ export class Editor {
             this.#input.value = before + inside + after;
         }
 
-
-
-        window.setTimeout(() => this.set_cursor(before.length + inside.length, true), 1);
+        window.setTimeout(() => this.set_cursor(before.length + inside.length), 1);
+        if(force_linebreak) this.#selection?.discard();
 
         this.#update_markdown_render();
+        if(this.#selection !== null && this.#selection.visible) this.#selection.update_render()
     }
 
     // -------------------------------
@@ -335,11 +345,12 @@ export class Editor {
     //  Editor typing stuff                            
     // -------------------------------
 
-    #last_parse: {html: string, char_map: {width_map: Array<Array<number>>, absolute_map: Array<number>}} = {
+    #last_parse: {html: string, char_map: {width_map: Array<Array<number>>, absolute_map: Array<number>, line_map: Array<Array<number>>}} = {
         "html": "",
         "char_map": {
             "absolute_map": [],
-            "width_map": []
+            "width_map": [],
+            "line_map": []
         }
     };
 
@@ -363,8 +374,7 @@ export class Editor {
         console.log(this.#last_parse.html);
 
         // Sanatize html
-        let text = this.#last_parse.html
-        //let text = DOMPurify.sanitize(this.#last_parse.html);
+        let text = DOMPurify.sanitize(this.#last_parse.html);
 
         console.log(this.#last_parse.html);
 
@@ -397,125 +407,6 @@ export class Editor {
         */
     }
 
-    // -------------------------------
-    //  Editor cursor stuff                           
-    // -------------------------------
-
-    #selection_start: number | null = null;
-    #selection_start_pos: Array<number> = [0, 0];
-    #selection_end: number = 0;
-    #mouse_down: boolean = false;
-    #has_selection: boolean = false;
-
-    #editor_mouse_down(e: MouseEvent) {
-        this.#mouse_down = true;
-        this.#has_selection = false;
-        this.#selection_start_pos = [e.clientX, e.clientY];
-        const cursor = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-        this.#selection_start = cursor ? cursor : null;
-    }
-
-    #editor_mouse_leave(e: MouseEvent) {
-    }
-
-    #editor_mouse_move(e: MouseEvent) {
-        if(this.#mouse_down) {
-            const cursor = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-            console.log(cursor);
-            if(cursor !== undefined) this.#selection_end = cursor;
-        }
-        if(this.#mouse_down && !this.#has_selection) {
-            let start_x = this.#selection_start_pos[0];
-            let start_y = this.#selection_start_pos[1];
-
-            if(start_x === undefined || start_y === undefined) return;
-
-            let dist = (start_x - e.clientX)**2 + (start_y - e.clientY)**2;
-            if(dist >= 64) {
-                console.log("SELECT!");
-                this.#has_selection = true;
-            }
-        }
-    }
-
-    #editor_mouse_up(e: MouseEvent) {
-        if(this.#mouse_down) {
-            const cursor = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-            if(cursor !== undefined) this.#selection_end = cursor;
-            if(!this.#has_selection && !window.getSelection()?.toString()) {
-
-                let result = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY);
-                console.log(result?.global);
-
-                if(result !== null && result.global !== undefined) {
-                    let mapped_cursor_pos = this.#last_parse.char_map.absolute_map[result.global];
-                    if(mapped_cursor_pos !== undefined) this.set_cursor(mapped_cursor_pos);
-                } else {
-                    this.set_cursor(this.#input.value.length);
-                }
-            }
-        }
-        this.#mouse_down = false;
-    }
-
-    set_cursor(position: number, no_focus = false) {
-        this.#text_display.querySelector('.infill-editor-cursor')?.classList.add('infill-cursor-force-mark');
-        window.setTimeout(() => this.#text_display.querySelector('.infill-editor-cursor')?.classList.remove('infill-cursor-force-mark'), 500);
-        if(!no_focus) this.#input.focus();
-        this.#input.selectionStart = position;
-        this.#input.selectionEnd = position;
-        this.#update_markdown_render();
-    }
-
-    // Get the cursor position inside an element depending on the location at which we clicked
-    #get_carret_position_from_point(root_element: HTMLElement, x: number, y: number) {
-
-        let carret_node: Node;
-        let local_offset: number = 0;
-
-        // get the carret position on a node
-        if(typeof document.caretPositionFromPoint === "function") {
-            let carret_position = document.caretPositionFromPoint(x, y);
-            if(!carret_position) return null;
-            carret_node = carret_position.offsetNode;
-            local_offset = carret_position.offset;
-
-        // Browser compat
-        } else if(typeof document.caretRangeFromPoint === "function") {
-            let carret_position = document.caretRangeFromPoint(x, y);
-            if(!carret_position) return null;
-            carret_node = carret_position.startContainer;
-            local_offset = carret_position.startOffset;
-
-        } else {
-            console.warn("You're using an older browser, selecting in the editor is not supported here!");
-            return null;
-        }
-
-
-        const walker = document.createTreeWalker(root_element, NodeFilter.SHOW_ALL); // Create a walker to go through all text nodes
-
-        let offset = 0;
-        while(true) { // Go through all text nodes <p></p> <strong></strong> etc.
-            let node = walker.nextNode();
-            if(!node) return null;
-            
-            if(node.nodeType === Node.TEXT_NODE) {
-                if(carret_node === node) {
-                    offset += local_offset;
-                    break;
-                }
-                if(node.textContent) offset += node.textContent.length;
-            }
-            
-        }
-
-        return {
-            "global": offset,
-            "local": local_offset
-        };
-    }
-
     // ==========================================================================================================================================
     // ------------------------------------------------------------------------------------------------------------------------------------------
     //                                                           KEYBOARD
@@ -523,6 +414,10 @@ export class Editor {
     // ==========================================================================================================================================
 
     #on_key_down(e: KeyboardEvent) {
+
+        // ======= HELPERS =======
+
+        // Helper states
         const key = e.key.toLowerCase();
         const is_shortcut = (
             document.activeElement === this.#input && 
@@ -531,34 +426,15 @@ export class Editor {
             !(e.getModifierState('Alt') || e.getModifierState('Shift'))
         );
 
-        // Detect removing a selection
-        if(
-            window.getSelection()?.toString() && 
-            (e.key === "Backspace" || e.key === "Delete")
-        ) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.#replace_selection('');
-        }
-
-        // Detect replacing a selection
-        if(
-            window.getSelection()?.toString() && 
-            e.key.length === 1 && 
-            !e.getModifierState('Control') && 
-            !e.getModifierState('Alt')
-        ) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.#replace_selection(e.key);
-        }
-
         // Update render when using arrow keys        
         if((key === "arrowleft" || key === "arrowright" || key === "arrowup" || key === "arrowdown") && !(e.getModifierState('Shift') || e.getModifierState('Ctrl'))) {
+            // Wait for the cursor to be moved by the browser and then update
             window.setTimeout(() => this.#update_markdown_render(), 1);
+        }
+        // ======= GENERAL SHORTCUTS =======
         
         // General insert shortcuts
-        } else if(key === "h" && is_shortcut) {
+        if(key === "h" && is_shortcut) {
             this.#insert_text("# ", "", true);
 
         } else if(key === "q" && is_shortcut) {
@@ -599,22 +475,35 @@ export class Editor {
 
         } else if(key === "p" && is_shortcut) {
             this.#insert_text("![]()", "", false);
-            
-        // Start selection when using SHIFT + Arrow key
-        } else if((key === "arrowleft" || key === "arrowright" || key === "arrowup" || key === "arrowdown") && e.getModifierState('Shift') && document.activeElement === this.#input) {
-            const input_cursor_pos = this.#input.selectionStart;
-            const output_cursor_pos = this.#last_parse.char_map.absolute_map.indexOf(input_cursor_pos);
-            this.#select_text(this.#text_display, output_cursor_pos, output_cursor_pos);
-        
-        // Select all text
-        } else if(key === "a" && e.getModifierState('Control') && !e.getModifierState('Shift')) {
-            this.#select_all(e);
         }
 
+        // Prevent default when using a shortcut
         if(is_shortcut && 'hqetbisumdlorp'.includes(key)) {
             e.preventDefault();
             e.stopPropagation();
         }
+
+        // ======= SELECTIONS =======
+
+        // Replace a selection
+        if(e.key.length === 1 && !e.getModifierState('Control') && !e.getModifierState('Alt') && this.#selection !== null && this.#selection.visible) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.#replace_selection(e.key);
+        }
+
+        // Remove selection
+        if((e.key === "Delete" || e.key === "Backspace") && this.#selection !== null && this.#selection.visible) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.#replace_selection('');
+        }
+
+        if(e.key === "ArrowLeft") this.#select_left(e, e.getModifierState('Control'));
+        if(e.key === "ArrowRight" && e.getModifierState('Shift')) this.#select_right(e, e.getModifierState('Control'));
+        if(e.key === "ArrowUp" && e.getModifierState('Shift')) this.#select_up(e);
+        if(e.key === "ArrowDown" && e.getModifierState('Shift')) this.#select_down(e);
+
     }
     
     #on_key_up(e: KeyboardEvent) {
@@ -623,184 +512,365 @@ export class Editor {
 
     // ==========================================================================================================================================
     // ------------------------------------------------------------------------------------------------------------------------------------------
-    //                                                        FIX SELECTIONS                                                                       
+    //                                                          DETECT MOUSE EVENTS                                                            
     // ------------------------------------------------------------------------------------------------------------------------------------------
     // ==========================================================================================================================================
 
+    // -------------------------------
+    //  Detect clicking vs selecting                         
+    // -------------------------------
 
+    #selection: EditorSelection | null = null;
+    #anchor_pos: Array<number> = [0, 0];
+    #mouse_down: boolean = false;
+    #has_selection: boolean = false;
 
+    // -------------------------------
+    //  Mouse down                            
+    // -------------------------------
 
-    // Get the start and end pos of the last selection
-    #get_selection() {
+    #editor_mouse_down(e: MouseEvent) {
+        if(e.target === null || !(e.target instanceof Node)) return;
 
-        // Get the cursor pos of start and end
-        const sel_start = this.#selection_start;
-        const sel_end = this.#selection_end;
+        
+        if(this.#editor.contains(e.target)) {
+            this.#mouse_down = true;
+            this.#has_selection = false;
+            this.#anchor_pos = [e.clientX, e.clientY];
 
-        if(sel_start === null) return null;
+            const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
 
-        // Sort the cursor positions
-        const start_char = Math.min(sel_start, sel_end);
-        let end_char = Math.max(sel_start, sel_end);
+            // discard the old selection
+            this.#selection?.discard();
 
-        if(start_char === undefined || end_char === undefined) return null;
+            if(cursor === undefined) return this.#selection = null;
+            this.#target_line_offs = null; // Reset the offset (used for selecting up and down)
 
-        if(end_char === this.#last_parse.char_map.absolute_map.length - 1) end_char = this.#input.value.length - 1;
-
-        // Return the selection
-        return {"start": start_char, "end": end_char};
+            // Register a new selection
+            this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
+        } else if(!this.#nav.contains(e.target)) {
+            this.#selection?.discard();
+        }
     }
 
-    // Check if the display element contains the currently selected text
-    #contains_selection(): boolean {
+    // -------------------------------
+    //  Mouse move                            
+    // -------------------------------
 
-        // Get the current selection
-        const sel = document.getSelection();
-        if(sel === null || !sel.toString()) return false;
-        const curr_sel = sel.getRangeAt(0);
+    #editor_mouse_move(e: MouseEvent) {
 
-        // Check if the start and end of the selection are within the container
-        return this.#wrapper.contains(curr_sel.startContainer) && this.#wrapper.contains(curr_sel.endContainer);
+        // Update the selection
+        if(this.#mouse_down) {
+            const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+            if(cursor !== undefined) this.#selection?.set_end(cursor);
+        }
+
+        // Detect if the mouse should start selecting by calculating the position from the anchor
+        if(this.#mouse_down && !this.#has_selection) {
+            let start_x = this.#anchor_pos[0];
+            let start_y = this.#anchor_pos[1];
+
+            if(start_x === undefined || start_y === undefined) return;
+
+            let dist = (start_x - e.clientX)**2 + (start_y - e.clientY)**2;
+            if(dist >= 64) {
+                this.#selection?.apply();
+                this.#has_selection = true;
+                this.#target_line_offs = null;
+            }
+        }
     }
 
-    // Replace a selection when typing
+    // -------------------------------
+    //  Mouse Up                            
+    // -------------------------------
+
+    #editor_mouse_up(e: MouseEvent) {
+        if(this.#mouse_down) {
+            const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+            if(cursor !== undefined) this.#selection?.set_end(cursor);
+
+            // This event is a click so re-position the cursor
+            if(!this.#has_selection && !window.getSelection()?.toString()) {
+                if(cursor) {
+                    const mapped_pos = this.#map_cursor_pos(cursor);
+                    if(mapped_pos !== undefined) this.set_cursor(mapped_pos);
+                } else {
+                    this.set_cursor(this.#input.value.length);
+                }
+                this.#update_markdown_render();
+            }
+        }
+        this.#mouse_down = false;
+    }
+    
+    // ==========================================================================================================================================
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    //                                                       HANDLE CURSORS                                                                       
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // ==========================================================================================================================================
+
+    // -------------------------------
+    //  Helpers                            
+    // -------------------------------
+
+    set_cursor(position: number, no_focus = false, no_update = false) {
+        this.#text_display.querySelector('.infill-editor-cursor')?.classList.add('infill-cursor-force-mark');
+        window.setTimeout(() => this.#text_display.querySelector('.infill-editor-cursor')?.classList.remove('infill-cursor-force-mark'), 500);
+        if(!no_focus) this.#input.focus();
+        this.#input.selectionStart = position;
+        this.#input.selectionEnd = position;
+        if(!no_update) this.#update_markdown_render();
+    }
+
+    // Map a cursor pos from html to markdown
+    #map_cursor_pos(position: number) {
+        return this.#last_parse.char_map.absolute_map[position];
+    }
+
+    // Map a cusor pos from markdown to html
+    #inverse_map_cursor_pos(position: number, map: Array<number> = this.#last_parse.char_map.absolute_map) {
+        const last_item = map[map.length - 1];
+        const first_item = map[0];
+
+        let mapped = map.indexOf(position);
+
+        // Detect index out of range
+        if(last_item !== undefined && position > last_item) return -1;
+        if(first_item !== undefined && position < first_item) return -1;
+
+        // Get the closest lower bound if the cursor pos didn't exist
+        while(mapped === -1 && position > 0) {
+            position--;
+            mapped = map.indexOf(position);
+        }
+
+        return mapped;
+    }
+
+    // ==========================================================================================================================================
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    //                                                      HANDLE SELECTIONS                                                                       
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // ==========================================================================================================================================
+
+    // -------------------------------
+    //  Helpers                            
+    // -------------------------------
+
+    // Replace selected text with a replacement string
     #replace_selection(value: string | undefined) {
-        const selection = this.#get_selection();
-
-        if(selection === null || value === undefined) return;
+        if(this.#selection === null || value === undefined) return null;
 
         // Convert the cursor pos from the html into a cursor pos in the textarea
-        let start = this.#last_parse.char_map.absolute_map[selection.start];
-        let end = this.#last_parse.char_map.absolute_map[selection.end];
+        const start = this.#map_cursor_pos(this.#selection.lo);
+        const end = this.#map_cursor_pos(this.#selection.hi);
 
-        if(start === undefined) return;
+        if(start === undefined) return null;
 
-        let before = this.#input.value.slice(0, start);
-        let after = this.#input.value.slice(end);
+        const before = this.#input.value.slice(0, start);
+        const inside = this.#input.value.slice(start, end);
+        const after = this.#input.value.slice(end);
 
         this.#input.value = before + value + after;
         this.#update_markdown_render();
-        this.set_cursor(before.length + value.length);
+
+        this.set_cursor(start + value.length);
+        this.#selection.discard();
+        return inside;
     }
 
-    #paste_selection(e: ClipboardEvent) {
-        const text = e.clipboardData?.getData("text");
-        if(window.getSelection()?.toString()) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.#replace_selection(text);
-        }
+    // get the line idx corresponding to a character offset in html
+    #get_line_idx(offs: number) {
+        return this.#last_parse.char_map.;
     }
+
+    // -------------------------------
+    //  Copy                            
+    // -------------------------------
 
     #copy_selection(e: ClipboardEvent) {
-        const selection = this.#get_selection();
+        if(this.#selection !== null && this.#selection.visible) {
+            e.preventDefault();
+            e.stopPropagation();
 
-        if(!this.#contains_selection()) return;
-        if(!selection) return;
+            const start = this.#map_cursor_pos(this.#selection.lo);
+            const end = this.#map_cursor_pos(this.#selection.hi);
 
-        e.preventDefault();
-        e.stopPropagation();
+            const selected = this.#input.value.slice(start, end);
 
-        const end = this.#last_parse.char_map.absolute_map[selection.end];
-        const start = this.#last_parse.char_map.absolute_map[selection.start];
-        let inside = this.#input.value.slice(start, end);
-
-        e.clipboardData?.setData('text', inside);
+            e.clipboardData?.setData('text', selected);
+        }
     }
+
+    // -------------------------------
+    //  Paste                            
+    // -------------------------------
+
+    #paste_selection(e: ClipboardEvent) {
+        if(this.#selection !== null && this.#selection.visible) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const replacement = e.clipboardData?.getData('text');
+
+            if(replacement === undefined) return;
+
+            this.#replace_selection(replacement);
+        }
+    }
+
+    // -------------------------------
+    //  Cut                            
+    // -------------------------------
 
     #cut_selection(e: ClipboardEvent) {
-        const selection = this.#get_selection();
+        if(this.#selection !== null && this.#selection.visible) {
+            e.preventDefault();
+            e.stopPropagation();
 
-        if(!this.#contains_selection()) return;
-        if(!selection) return;
+            const inside = this.#replace_selection("");
+            if(inside === null) return;
 
-        e.preventDefault();
-        e.stopPropagation();
-
-        const end = this.#last_parse.char_map.absolute_map[selection.end];
-        const start = this.#last_parse.char_map.absolute_map[selection.start];
-
-        let inside = this.#input.value.slice(start, end);
-        let before = this.#input.value.slice(0, start);
-        let after = this.#input.value.slice(end);
-
-        this.#input.value = before + after;
-        this.#update_markdown_render();
-        this.set_cursor(before.length);
-
-        e.clipboardData?.setData('text', inside);
+            e.clipboardData?.setData('text', inside);
+        }
     }
 
-    #select_all(e: KeyboardEvent) {
+    // -------------------------------
+    //  Select with shift                            
+    // -------------------------------
 
-        if(!this.#contains_selection() && this.#input !== document.activeElement) return;
+    // Main helper
+    #select(dist: number) {
+        const cursor = this.#inverse_map_cursor_pos(this.#input.selectionStart);
 
+        console.log(cursor);
+
+        if(cursor === undefined) return;
+
+        if(this.#selection === null || !this.#selection.visible) {
+            this.#input.blur();
+            this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
+            this.#selection.apply();
+        }
+
+        // limit the final distance to not extend beyond the text contents
+        const final_dist = Math.max(
+            Math.min(
+                dist,
+                this.#last_parse.char_map?.absolute_map.length - this.#selection.end - 2
+            ),
+            -this.#selection.end
+        );
+
+        console.log(dist, final_dist, this.#selection.end);
+
+        // Apply the final distance
+        if(final_dist !== 0) this.#selection.move_end(final_dist);
+
+        // Collapse into a cursor
+        if(this.#selection.length === 0) {
+            const sel = this.#map_cursor_pos(this.#selection.end)
+            if(sel !== undefined) this.set_cursor(sel);
+            this.#selection.discard();
+        
+        // Move the cursor with the selection
+        } else if(this.#selection !== null) {
+            const sel = this.#map_cursor_pos(this.#selection.end)
+            if(sel !== undefined) this.set_cursor(sel);
+        }
+    }
+
+    #target_line_offs: number | null = 0;
+
+    #select_left(e: KeyboardEvent, ctrl: boolean) {
+        
+        if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
         e.preventDefault();
         e.stopPropagation();
 
-        // Create a new range covering the whole div
-        const range = document.createRange();
-        range.selectNodeContents(this.#text_display);
-        const last_elem = this.#input.value.length;
+        console.log('SELECT');
 
-        if(last_elem) {
-            this.#selection_start = 0;
-            this.#selection_end = last_elem;
+
+        // Select till the start of the line whith CTRL
+        if(ctrl) {
+            const cursor_pos = this.#input.selectionStart;
+            const line_idx = this.#get_line_idx(cursor_pos);
+
+            const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+
+            if(curr_line_map == undefined) return;
+
+            let end_line_offset = curr_line_map.indexOf(cursor_pos);
+            if(end_line_offset === -1) end_line_offset = curr_line_map.length;
+
+            this.#select(-end_line_offset - 1);
+
+        // Otherwise just decrease the selection end by one
         } else {
-            this.#selection_start = null;
+            this.#select(-1);
         }
 
-        this.#input.blur();
-
-        const selection = window.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
+        this.#target_line_offs = null;
     }
 
-    #select_text(elem: Element, start: number, end: number) {
-        const walker = document.createTreeWalker(
-            elem,
-            NodeFilter.SHOW_TEXT
-        );
+    #select_right(e: KeyboardEvent, ctrl: boolean) {
+        if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
+        e.preventDefault();
+        e.stopPropagation();
 
-        let position = 0;
-        let startNode = null;
-        let startOffset = 0;
-        let endNode = null;
-        let endOffset = 0;
+        // Select till the end of the line whith CTRL
+        if(ctrl) {
+            const cursor_pos = this.#input.selectionStart;
+            const line_idx = this.#get_line_idx(cursor_pos);
 
-        let node;
+            const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
 
-        while (node = walker.nextNode()) {
-            if(node.nodeValue === null) return;
-            const length = node.nodeValue.length;
+            if(curr_line_map == undefined) return;
 
-            if (startNode === null && start <= position + length) {
-                startNode = node;
-                startOffset = start - position;
-            }
+            let end_line_offset = curr_line_map.indexOf(cursor_pos);
+            if(end_line_offset === -1) end_line_offset = curr_line_map.length;
 
-            if (end <= position + length) {
-                endNode = node;
-                endOffset = end - position;
-                break;
-            }
+            this.#select(curr_line_map.length - end_line_offset);
 
-            position += length;
+        // Otherwise just increase the selection end by 1
+        } else {
+            this.#select(1);
         }
 
-        if (!startNode || !endNode) return;
+        this.#target_line_offs = null;
+    }
 
-        const selection = window.getSelection();
-        if(selection === null) return;
-        selection.removeAllRanges();
+    #select_up(e: KeyboardEvent) {
+        if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
+        e.preventDefault();
+        e.stopPropagation();
 
-        selection.setBaseAndExtent(
-            startNode,
-            startOffset,
-            endNode,
-            endOffset
-        );
-        this.#input.blur();
+        const cursor_pos_html = this.#inverse_map_cursor_pos(this.#input.selectionStart);
+
+        if(this.#selection === null || !this.#selection.visible) {
+
+            // Calculate the target offset
+            const line_idx = this.#get_line_idx(cursor_pos_html); // The index of the current line
+            const curr_line_map = this.#last_parse
+
+            const line_start_offs = 
+
+            this.#input.blur();
+            this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor_pos_html, cursor_pos_html);
+            this.#selection.apply();
+        }
+
+        const selection_pos = this.#selection.end;
+
+        
+    }
+
+    #select_down(e: KeyboardEvent) {
+        if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        
     }
 }

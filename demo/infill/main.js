@@ -1474,6 +1474,43 @@ var require_prism = __commonJS({
   }
 });
 
+// src/utils.ts
+function cursor_pos_from_point(root_element, x, y) {
+  let carret_node;
+  let local_offset = 0;
+  if (typeof document.caretPositionFromPoint === "function") {
+    let carret_position = document.caretPositionFromPoint(x, y);
+    if (!carret_position) return null;
+    carret_node = carret_position.offsetNode;
+    local_offset = carret_position.offset;
+  } else if (typeof document.caretRangeFromPoint === "function") {
+    let carret_position = document.caretRangeFromPoint(x, y);
+    if (!carret_position) return null;
+    carret_node = carret_position.startContainer;
+    local_offset = carret_position.startOffset;
+  } else {
+    console.warn("You're using an older browser, selecting in the editor is not supported here!");
+    return null;
+  }
+  const walker = document.createTreeWalker(root_element, NodeFilter.SHOW_ALL);
+  let offset = 0;
+  while (true) {
+    let node = walker.nextNode();
+    if (!node) return null;
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (carret_node === node) {
+        offset += local_offset;
+        break;
+      }
+      if (node.textContent) offset += node.textContent.length;
+    }
+  }
+  return {
+    "global": offset,
+    "local": local_offset
+  };
+}
+
 // node_modules/@theblackswitch/yamp/dist/main.js
 var StringHelper = class {
   static CHAR_CODE = {
@@ -1618,21 +1655,25 @@ var CharMap = class _CharMap {
   }
   absolute_map() {
     let absolute_map = [];
+    let line_map = [];
     let offset = 0;
     for (let line_idx = 0; line_idx < this.width_map.length; line_idx++) {
       let curr_line = this.width_map[line_idx];
       if (curr_line === void 0) continue;
+      let curr_map = [];
       for (let i = 0; i < curr_line.length; i++) {
         let curr_width = curr_line[i];
         if (curr_width !== void 0 && curr_width >= 0 && curr_width < 255) {
           for (let ai = 0; ai <= curr_width; ai++) {
             absolute_map.push(offset);
+            curr_map.push(offset);
           }
         }
         offset++;
       }
+      line_map.push(curr_map);
     }
-    return { "absolute_map": absolute_map, "width_map": this.width_map };
+    return { "absolute_map": absolute_map, "width_map": this.width_map, "line_map": line_map };
   }
 };
 var IsTypeOf = class {
@@ -2367,7 +2408,7 @@ var Link = class extends InlineParser {
           text_part_open -= 1;
           continue;
         }
-        if (next_char === "!") {
+        if (next_char === "!" || link_part.length === 0 || text_part.length === 0) {
           link_part_done = 0;
           link_part_open = 0;
           text_part_open = 0;
@@ -2417,13 +2458,11 @@ var Image = class extends InlineParser {
     let text_part_open = false;
     let image_part = "";
     let text_part = "";
-    let link_end = 0;
     for (let i = input.length - 1; i >= 0; i--) {
       let char = input.charAt(i);
       let next_char = input.charAt(i - 1);
       if (char === ")" && next_char !== "\\") {
         image_part_open = true;
-        link_end = i;
         image_part = "";
       } else if (char == "(" && next_char !== "\\" && image_part_open) {
         image_part_open = false;
@@ -2434,6 +2473,12 @@ var Image = class extends InlineParser {
       } else if (char === "[" && next_char === "!" && image_part_done && text_part_open) {
         text_part_open = false;
         image_part_done = false;
+        if (image_part.length === 0 || text_part.length === 0) {
+          image_part_open = false;
+          image_part_done = false;
+          text_part_open = false;
+          continue;
+        }
         let title_start = 0;
         if (image_part.charAt(image_part.length - 1) === '"') {
           for (let idx = image_part.length - 2; idx >= 0; idx--) {
@@ -2638,15 +2683,18 @@ var CodeBlock = class _CodeBlock extends MultilineParser {
     return this.#ended;
   }
   extend(text2, end_block = false) {
-    this.#lines.push(text2);
-    if (end_block) this.#ended = true;
+    if (end_block) {
+      this.#ended = true;
+    } else {
+      this.#lines.push(text2);
+    }
     return true;
   }
   static parse(line, all_lines, line_idx, CHAR_MAP, char_map_line, charmap_idx, ast, parsers, options) {
     let prev_node = ast[ast.length - 1];
     if (prev_node instanceof _CodeBlock && !prev_node.is_ended) {
-      if (line.startsWith("```")) {
-        CHAR_MAP.discard_immediately(char_map_line, charmap_idx, line.length);
+      if (line.startsWith("```") && line.length === 4 && line.endsWith("\n")) {
+        CHAR_MAP.discard_immediately(char_map_line, charmap_idx, 3);
         prev_node.extend("", true);
       } else {
         let text2 = "";
@@ -2681,7 +2729,7 @@ var CodeBlock = class _CodeBlock extends MultilineParser {
     if (line.startsWith("```")) {
       let success = false;
       for (let i = line_idx + 1; i < all_lines.length; i++) {
-        if (all_lines[i]?.startsWith("```")) {
+        if (all_lines[i]?.startsWith("```") && all_lines[i]?.length === 4 && all_lines[i]?.endsWith("\n")) {
           success = true;
           break;
         }
@@ -2965,6 +3013,11 @@ var Color = class extends InlineParser {
         color_done = true;
       } else if (char === "]" && color_done && color_opened) {
         let color_part = input.slice(color_start + 1, color_end);
+        if (color_part.length === 0 || color_end + 1 === i) {
+          color_opened = false;
+          color_done = false;
+          continue;
+        }
         modifiers.push(InlineModifer.new_replace(color_start, color_end - color_start + 1, `<span style="color: ${color_part};">`, true));
         modifiers.push(InlineModifer.new_replace(i, 1, "</span>", true));
       } else if (color_opened && !color_done && !StringHelper.is_text_char(char) && char !== "#") {
@@ -3622,7 +3675,7 @@ var mathMl$1 = freeze(["math", "menclose", "merror", "mfenced", "mfrac", "mglyph
 var mathMlDisallowed = freeze(["maction", "maligngroup", "malignmark", "mlongdiv", "mscarries", "mscarry", "msgroup", "mstack", "msline", "msrow", "semantics", "annotation", "annotation-xml", "mprescripts", "none"]);
 var text = freeze(["#text"]);
 var html = freeze(["accept", "action", "align", "alt", "autocapitalize", "autocomplete", "autopictureinpicture", "autoplay", "background", "bgcolor", "border", "capture", "cellpadding", "cellspacing", "checked", "cite", "class", "clear", "color", "cols", "colspan", "command", "commandfor", "controls", "controlslist", "coords", "crossorigin", "datetime", "decoding", "default", "dir", "disabled", "disablepictureinpicture", "disableremoteplayback", "download", "draggable", "enctype", "enterkeyhint", "exportparts", "face", "for", "headers", "height", "hidden", "high", "href", "hreflang", "id", "inert", "inputmode", "integrity", "ismap", "kind", "label", "lang", "list", "loading", "loop", "low", "max", "maxlength", "media", "method", "min", "minlength", "multiple", "muted", "name", "nonce", "noshade", "novalidate", "nowrap", "open", "optimum", "part", "pattern", "placeholder", "playsinline", "popover", "popovertarget", "popovertargetaction", "poster", "preload", "pubdate", "radiogroup", "readonly", "rel", "required", "rev", "reversed", "role", "rows", "rowspan", "spellcheck", "scope", "selected", "shape", "size", "sizes", "slot", "span", "srclang", "start", "src", "srcset", "step", "style", "summary", "tabindex", "title", "translate", "type", "usemap", "valign", "value", "width", "wrap", "xmlns"]);
-var svg = freeze(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dominant-baseline", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "mask-type", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-orientation", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]);
+var svg = freeze(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dominant-baseline", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "mask-type", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "pointer-events", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-orientation", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "vector-effect", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]);
 var mathMl = freeze(["accent", "accentunder", "align", "bevelled", "close", "columnalign", "columnlines", "columnspacing", "columnspan", "denomalign", "depth", "dir", "display", "displaystyle", "encoding", "fence", "frame", "height", "href", "id", "largeop", "length", "linethickness", "lquote", "lspace", "mathbackground", "mathcolor", "mathsize", "mathvariant", "maxsize", "minsize", "movablelimits", "notation", "numalign", "open", "rowalign", "rowlines", "rowspacing", "rowspan", "rspace", "rquote", "scriptlevel", "scriptminsize", "scriptsizemultiplier", "selection", "separator", "separators", "stretchy", "subscriptshift", "supscriptshift", "symmetric", "voffset", "width", "xmlns"]);
 var xml = freeze(["xlink:href", "xml:id", "xlink:title", "xml:space", "xmlns:xlink"]);
 var MUSTACHE_EXPR = seal(/{{[\w\W]*|^[\w\W]*}}/g);
@@ -3662,6 +3715,15 @@ var NODE_TYPE = {
   notation: 12
   // Deprecated
 };
+var LITERAL_TEXT_ELEMENT_NAMES = ["style", "script", "xmp", "iframe", "noembed", "noframes", "plaintext", "noscript"];
+var LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, LITERAL_TEXT_ELEMENT_NAMES));
+var LITERAL_TEXT_CLOSE = (function() {
+  const map = {};
+  arrayForEach(LITERAL_TEXT_ELEMENT_NAMES, (name) => {
+    map[name] = seal(new RegExp("</" + name + "(?=[\\t\\n\\f\\r />])", "i"));
+  });
+  return freeze(map);
+})();
 var getGlobal = function getGlobal2() {
   return typeof window === "undefined" ? null : window;
 };
@@ -3705,14 +3767,18 @@ var _createHooksMap = function _createHooksMap2() {
 var _resolveSetOption = function _resolveSetOption2(cfg, key, fallback, options) {
   return objectHasOwnProperty(cfg, key) && arrayIsArray(cfg[key]) ? addToSet(options.base ? clone(options.base) : {}, cfg[key], options.transform) : fallback;
 };
+var _resolveObjectOption = function _resolveObjectOption2(cfg, key, makeFallback) {
+  const value = objectHasOwnProperty(cfg, key) ? cfg[key] : void 0;
+  return value && typeof value === "object" ? clone(value) : makeFallback();
+};
 function createDOMPurify() {
   let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
-  const DOMPurify2 = (root) => createDOMPurify(root);
-  DOMPurify2.version = "3.4.13";
-  DOMPurify2.removed = [];
+  const DOMPurify = (root) => createDOMPurify(root);
+  DOMPurify.version = "3.4.14";
+  DOMPurify.removed = [];
   if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
-    DOMPurify2.isSupported = false;
-    return DOMPurify2;
+    DOMPurify.isSupported = false;
+    return DOMPurify;
   }
   let document2 = window2.document;
   const originalDocument = document2;
@@ -3733,6 +3799,12 @@ function createDOMPurify() {
   const getNodeType = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "nodeType") : null;
   const getNodeName = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "nodeName") : null;
   const getOwnerDocument = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "ownerDocument") : null;
+  const _readNodeType = function _readNodeType2(node) {
+    return getNodeType ? getNodeType(node) : node.nodeType;
+  };
+  const _readNodeName = function _readNodeName2(node) {
+    return getNodeName ? getNodeName(node) : node.nodeName;
+  };
   if (typeof HTMLTemplateElement === "function") {
     const template = document2.createElement("template");
     if (template.content && template.content.ownerDocument) {
@@ -3777,7 +3849,7 @@ function createDOMPurify() {
   const _document = document2, implementation = _document.implementation, createNodeIterator = _document.createNodeIterator, createDocumentFragment = _document.createDocumentFragment, getElementsByTagName = _document.getElementsByTagName;
   const importNode = originalDocument.importNode;
   let hooks = _createHooksMap();
-  DOMPurify2.isSupported = typeof entries === "function" && typeof getParentNode === "function" && implementation && implementation.createHTMLDocument !== void 0;
+  DOMPurify.isSupported = typeof entries === "function" && typeof getParentNode === "function" && implementation && implementation.createHTMLDocument !== void 0;
   const MUSTACHE_EXPR$1 = MUSTACHE_EXPR, ERB_EXPR$1 = ERB_EXPR, TMPLIT_EXPR$1 = TMPLIT_EXPR, DATA_ATTR$1 = DATA_ATTR, ARIA_ATTR$1 = ARIA_ATTR, IS_SCRIPT_OR_DATA$1 = IS_SCRIPT_OR_DATA, ATTR_WHITESPACE$1 = ATTR_WHITESPACE, CUSTOM_ELEMENT$1 = CUSTOM_ELEMENT;
   let IS_ALLOWED_URI$1 = IS_ALLOWED_URI;
   let ALLOWED_TAGS = null;
@@ -3959,9 +4031,19 @@ function createDOMPurify() {
     IN_PLACE = cfg.IN_PLACE || false;
     IS_ALLOWED_URI$1 = isRegex(cfg.ALLOWED_URI_REGEXP) ? cfg.ALLOWED_URI_REGEXP : IS_ALLOWED_URI;
     NAMESPACE = typeof cfg.NAMESPACE === "string" ? cfg.NAMESPACE : HTML_NAMESPACE;
-    MATHML_TEXT_INTEGRATION_POINTS = objectHasOwnProperty(cfg, "MATHML_TEXT_INTEGRATION_POINTS") && cfg.MATHML_TEXT_INTEGRATION_POINTS && typeof cfg.MATHML_TEXT_INTEGRATION_POINTS === "object" ? clone(cfg.MATHML_TEXT_INTEGRATION_POINTS) : addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
-    HTML_INTEGRATION_POINTS = objectHasOwnProperty(cfg, "HTML_INTEGRATION_POINTS") && cfg.HTML_INTEGRATION_POINTS && typeof cfg.HTML_INTEGRATION_POINTS === "object" ? clone(cfg.HTML_INTEGRATION_POINTS) : addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS);
-    const customElementHandling = objectHasOwnProperty(cfg, "CUSTOM_ELEMENT_HANDLING") && cfg.CUSTOM_ELEMENT_HANDLING && typeof cfg.CUSTOM_ELEMENT_HANDLING === "object" ? clone(cfg.CUSTOM_ELEMENT_HANDLING) : create(null);
+    MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(
+      cfg,
+      "MATHML_TEXT_INTEGRATION_POINTS",
+      () => addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS)
+      // Default built-in map
+    );
+    HTML_INTEGRATION_POINTS = _resolveObjectOption(
+      cfg,
+      "HTML_INTEGRATION_POINTS",
+      () => addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS)
+      // Default built-in map
+    );
+    const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", () => create(null));
     CUSTOM_ELEMENT_HANDLING = create(null);
     if (objectHasOwnProperty(customElementHandling, "tagNameCheck") && isRegexOrFunction(customElementHandling.tagNameCheck)) {
       CUSTOM_ELEMENT_HANDLING.tagNameCheck = customElementHandling.tagNameCheck;
@@ -4023,15 +4105,6 @@ function createDOMPurify() {
         }
         addToSet(ALLOWED_ATTR, cfg.ADD_ATTR, transformCaseFunc);
       }
-    }
-    if (objectHasOwnProperty(cfg, "ADD_URI_SAFE_ATTR") && arrayIsArray(cfg.ADD_URI_SAFE_ATTR)) {
-      addToSet(URI_SAFE_ATTRIBUTES, cfg.ADD_URI_SAFE_ATTR, transformCaseFunc);
-    }
-    if (objectHasOwnProperty(cfg, "FORBID_CONTENTS") && arrayIsArray(cfg.FORBID_CONTENTS)) {
-      if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) {
-        FORBID_CONTENTS = clone(FORBID_CONTENTS);
-      }
-      addToSet(FORBID_CONTENTS, cfg.FORBID_CONTENTS, transformCaseFunc);
     }
     if (objectHasOwnProperty(cfg, "ADD_FORBID_CONTENTS") && arrayIsArray(cfg.ADD_FORBID_CONTENTS)) {
       if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) {
@@ -4137,7 +4210,7 @@ function createDOMPurify() {
     return false;
   };
   const _forceRemove = function _forceRemove2(node) {
-    arrayPush(DOMPurify2.removed, {
+    arrayPush(DOMPurify.removed, {
       element: node
     });
     try {
@@ -4146,6 +4219,16 @@ function createDOMPurify() {
       remove(node);
       if (!getParentNode(node)) {
         throw typeErrorCreate("a node selected for removal could not be detached from its tree and cannot be safely returned; refusing to sanitize in place");
+      }
+    }
+  };
+  const _stripAttributeNode = function _stripAttributeNode2(element, attribute, name) {
+    try {
+      element.removeAttributeNode(attribute);
+    } catch (_) {
+      try {
+        element.removeAttribute(name);
+      } catch (_2) {
       }
     }
   };
@@ -4170,27 +4253,35 @@ function createDOMPurify() {
         const attribute = attributes[i];
         const name = attribute && attribute.name;
         if (typeof name === "string") {
-          try {
-            root.removeAttribute(name);
-          } catch (_) {
-          }
+          _stripAttributeNode(root, attribute, name);
         }
       }
     }
   };
-  const _removeAttribute = function _removeAttribute2(name, element) {
-    try {
-      arrayPush(DOMPurify2.removed, {
-        attribute: element.getAttributeNode(name),
-        from: element
-      });
-    } catch (_) {
-      arrayPush(DOMPurify2.removed, {
-        attribute: null,
-        from: element
-      });
+  const _removeAttribute = function _removeAttribute2(name, element, attr) {
+    if (!attr) {
+      try {
+        attr = element.getAttributeNode(name);
+      } catch (_) {
+        attr = null;
+      }
     }
-    element.removeAttribute(name);
+    arrayPush(DOMPurify.removed, {
+      attribute: attr || null,
+      from: element
+    });
+    try {
+      if (attr) {
+        element.removeAttributeNode(attr);
+      } else {
+        element.removeAttribute(name);
+      }
+    } catch (_) {
+      try {
+        element.removeAttribute(name);
+      } catch (_2) {
+      }
+    }
     if (name === "is") {
       if (RETURN_DOM || RETURN_DOM_FRAGMENT) {
         try {
@@ -4216,17 +4307,14 @@ function createDOMPurify() {
       if (typeof name !== "string" || ALLOWED_ATTR[transformCaseFunc(name)]) {
         continue;
       }
-      try {
-        element.removeAttribute(name);
-      } catch (_) {
-      }
+      _stripAttributeNode(element, attribute, name);
     }
   };
   const _neutralizeSubtree = function _neutralizeSubtree2(root) {
     const stack = [root];
     while (stack.length > 0) {
       const node = stack.pop();
-      const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+      const nodeType = _readNodeType(node);
       if (nodeType === NODE_TYPE.element) {
         _stripDisallowedAttributes(node);
       }
@@ -4238,6 +4326,15 @@ function createDOMPurify() {
       }
     }
   };
+  const _isPatchLinkageAttribute = function _isPatchLinkageAttribute2(lcName, lcTag) {
+    if (!SAFE_FOR_XML) {
+      return false;
+    }
+    if (lcName === "patchsrc") {
+      return true;
+    }
+    return lcName === "for" && lcTag !== "label" && lcTag !== "output";
+  };
   const _neutralizePatchLinkage = function _neutralizePatchLinkage2(root) {
     if (!SAFE_FOR_XML) {
       return;
@@ -4245,7 +4342,7 @@ function createDOMPurify() {
     const stack = [root];
     while (stack.length > 0) {
       const node = stack.pop();
-      const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+      const nodeType = _readNodeType(node);
       if (nodeType === NODE_TYPE.processingInstruction || nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, node.data)) {
         try {
           remove(node);
@@ -4255,12 +4352,12 @@ function createDOMPurify() {
       }
       if (nodeType === NODE_TYPE.element) {
         const element = node;
-        const lcTag = transformCaseFunc(getNodeName ? getNodeName(node) : node.nodeName);
+        const lcTag = transformCaseFunc(_readNodeName(node));
         try {
           if (element.hasAttribute && element.hasAttribute("patchsrc")) {
             element.removeAttribute("patchsrc");
           }
-          if (element.hasAttribute && element.hasAttribute("for") && lcTag !== "label" && lcTag !== "output") {
+          if (element.hasAttribute && element.hasAttribute("for") && _isPatchLinkageAttribute("for", lcTag)) {
             element.removeAttribute("for");
           }
         } catch (_) {
@@ -4408,14 +4505,14 @@ function createDOMPurify() {
       return;
     }
     arrayForEach(hooks2, (hook) => {
-      hook.call(DOMPurify2, currentNode, data, CONFIG);
+      hook.call(DOMPurify, currentNode, data, CONFIG);
     });
   }
   const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName) {
     if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) {
       return true;
     }
-    if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && tagName === "style" && _isNode(currentNode.firstElementChild)) {
+    if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && LITERAL_TEXT_ELEMENTS[tagName] && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(LITERAL_TEXT_CLOSE[tagName], currentNode.textContent))) {
       return true;
     }
     if (currentNode.nodeType === NODE_TYPE.processingInstruction) {
@@ -4426,14 +4523,21 @@ function createDOMPurify() {
     }
     return false;
   };
+  const _matchesNameCheck = function _matchesNameCheck2(check, name) {
+    if (check instanceof RegExp) {
+      return regExpTest(check, name);
+    }
+    if (check instanceof Function) {
+      for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+        args[_key - 2] = arguments[_key];
+      }
+      return Boolean(check(name, ...args));
+    }
+    return false;
+  };
   const _sanitizeDisallowedNode = function _sanitizeDisallowedNode2(currentNode, tagName, root) {
-    if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName)) {
-      if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) {
-        return false;
-      }
-      if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(tagName)) {
-        return false;
-      }
+    if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) {
+      return false;
     }
     if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
       const parentNode = getParentNode(currentNode);
@@ -4455,28 +4559,31 @@ function createDOMPurify() {
     }
     return set === defaultSet || set === setConfigSet ? clone(set) : set;
   };
+  const _handleHookDetachedNode = function _handleHookDetachedNode2(currentNode, root) {
+    if (currentNode === root || getParentNode(currentNode) !== null) {
+      return false;
+    }
+    if (IN_PLACE) {
+      _neutralizeSubtree(currentNode);
+    }
+    return true;
+  };
   const _sanitizeElements = function _sanitizeElements2(currentNode, root) {
     _executeHooks(hooks.beforeSanitizeElements, currentNode, null);
-    if (currentNode !== root && getParentNode(currentNode) === null) {
-      if (IN_PLACE) {
-        _neutralizeSubtree(currentNode);
-      }
+    if (_handleHookDetachedNode(currentNode, root)) {
       return true;
     }
     if (_isClobbered(currentNode)) {
       _forceRemove(currentNode);
       return true;
     }
-    const tagName = transformCaseFunc(getNodeName ? getNodeName(currentNode) : currentNode.nodeName);
+    const tagName = transformCaseFunc(_readNodeName(currentNode));
     ALLOWED_TAGS = _forkSharedAllowlist(hooks.uponSanitizeElement, ALLOWED_TAGS, DEFAULT_ALLOWED_TAGS, SET_CONFIG_ALLOWED_TAGS);
     _executeHooks(hooks.uponSanitizeElement, currentNode, {
       tagName,
       allowedTags: ALLOWED_TAGS
     });
-    if (currentNode !== root && getParentNode(currentNode) === null) {
-      if (IN_PLACE) {
-        _neutralizeSubtree(currentNode);
-      }
+    if (_handleHookDetachedNode(currentNode, root)) {
       return true;
     }
     if (_isUnsafeNode(currentNode, tagName)) {
@@ -4490,7 +4597,7 @@ function createDOMPurify() {
       }
       return removed;
     }
-    const nt = getNodeType ? getNodeType(currentNode) : currentNode.nodeType;
+    const nt = _readNodeType(currentNode);
     if (nt === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
       _forceRemove(currentNode);
       return true;
@@ -4502,7 +4609,7 @@ function createDOMPurify() {
     if (SAFE_FOR_TEMPLATES && currentNode.nodeType === NODE_TYPE.text) {
       const content = _stripTemplateExpressions(currentNode.textContent);
       if (currentNode.textContent !== content) {
-        arrayPush(DOMPurify2.removed, {
+        arrayPush(DOMPurify.removed, {
           element: currentNode.cloneNode()
         });
         currentNode.textContent = content;
@@ -4515,38 +4622,43 @@ function createDOMPurify() {
     if (FORBID_ATTR[lcName]) {
       return false;
     }
-    if (SAFE_FOR_XML && lcName === "patchsrc") {
-      return false;
-    }
-    if (SAFE_FOR_XML && lcName === "for" && lcTag !== "label" && lcTag !== "output") {
+    if (_isPatchLinkageAttribute(lcName, lcTag)) {
       return false;
     }
     if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value in document2 || value in formElement)) {
       return false;
     }
     const nameIsPermitted = ALLOWED_ATTR[lcName] || EXTRA_ELEMENT_HANDLING.attributeCheck instanceof Function && EXTRA_ELEMENT_HANDLING.attributeCheck(lcName, lcTag);
-    if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName)) ;
-    else if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) ;
-    else if (!nameIsPermitted) {
-      if (
-        // First condition does a very basic check if a) it's basically a valid custom element tagname AND
-        // b) if the tagName passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-        // and c) if the attribute name passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.attributeNameCheck
-        _isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName, lcTag)) || // Alternative, second condition checks if it's an `is`-attribute, AND
-        // the value passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-        lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value))
-      ) ;
-      else {
-        return false;
-      }
-    } else if (URI_SAFE_ATTRIBUTES[lcName]) ;
-    else if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value, ATTR_WHITESPACE$1, ""))) ;
-    else if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value, "data:") === 0 && DATA_URI_TAGS[lcTag]) ;
-    else if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value, ATTR_WHITESPACE$1, ""))) ;
-    else if (value) {
-      return false;
-    } else ;
-    return true;
+    if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName)) {
+      return true;
+    }
+    if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) {
+      return true;
+    }
+    if (!nameIsPermitted) {
+      return (
+        // Condition a) covers a basically valid custom element tag name whose
+        // tag passes the configured tagNameCheck and whose attribute name
+        // passes the configured attributeNameCheck ...
+        _isBasicCustomElement(lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName, lcTag) || // Condition b) covers an `is` attribute whose value passes the
+        // configured tagNameCheck while customized built-in elements are
+        // allowed.
+        lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value)
+      );
+    }
+    if (URI_SAFE_ATTRIBUTES[lcName]) {
+      return true;
+    }
+    if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value, ATTR_WHITESPACE$1, ""))) {
+      return true;
+    }
+    if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value, "data:") === 0 && DATA_URI_TAGS[lcTag]) {
+      return true;
+    }
+    if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value, ATTR_WHITESPACE$1, ""))) {
+      return true;
+    }
+    return !value;
   };
   const RESERVED_CUSTOM_ELEMENT_NAMES = addToSet({}, ["annotation-xml", "color-profile", "font-face", "font-face-format", "font-face-name", "font-face-src", "font-face-uri", "missing-glyph"]);
   const _isBasicCustomElement = function _isBasicCustomElement2(tagName) {
@@ -4575,7 +4687,7 @@ function createDOMPurify() {
       if (_isClobbered(currentNode)) {
         _forceRemove(currentNode);
       } else {
-        arrayPop(DOMPurify2.removed);
+        arrayPop(DOMPurify.removed);
       }
     } catch (_) {
       _removeAttribute(name, currentNode);
@@ -4610,33 +4722,33 @@ function createDOMPurify() {
       _executeHooks(hooks.uponSanitizeAttribute, currentNode, hookEvent);
       value = hookEvent.attrValue;
       if (SANITIZE_NAMED_PROPS && (lcName === "id" || lcName === "name") && stringIndexOf(value, SANITIZE_NAMED_PROPS_PREFIX) !== 0) {
-        _removeAttribute(name, currentNode);
+        _removeAttribute(name, currentNode, attr);
         value = SANITIZE_NAMED_PROPS_PREFIX + value;
       }
       if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value)) {
-        _removeAttribute(name, currentNode);
+        _removeAttribute(name, currentNode, attr);
         continue;
       }
       if (lcName === "attributename" && stringMatch(value, "href")) {
-        _removeAttribute(name, currentNode);
+        _removeAttribute(name, currentNode, attr);
         continue;
       }
       if (hookEvent.forceKeepAttr) {
         continue;
       }
       if (!hookEvent.keepAttr) {
-        _removeAttribute(name, currentNode);
+        _removeAttribute(name, currentNode, attr);
         continue;
       }
       if (!ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(SELF_CLOSING_TAG, value)) {
-        _removeAttribute(name, currentNode);
+        _removeAttribute(name, currentNode, attr);
         continue;
       }
       if (SAFE_FOR_TEMPLATES) {
         value = _stripTemplateExpressions(value);
       }
       if (!_isValidAttribute(lcTag, lcName, value)) {
-        _removeAttribute(name, currentNode);
+        _removeAttribute(name, currentNode, attr);
         continue;
       }
       value = _applyTrustedTypesToAttribute(lcTag, lcName, namespaceURI, value);
@@ -4657,8 +4769,7 @@ function createDOMPurify() {
       if (_isDocumentFragment(shadowNode.content)) {
         _sanitizeShadowDOM2(shadowNode.content);
       }
-      const shadowNodeType = getNodeType ? getNodeType(shadowNode) : shadowNode.nodeType;
-      if (shadowNodeType === NODE_TYPE.element) {
+      if (_readNodeType(shadowNode) === NODE_TYPE.element) {
         const innerSr = getShadowRoot(shadowNode);
         if (_isDocumentFragment(innerSr)) {
           _sanitizeAttachedShadowRoots(innerSr);
@@ -4680,7 +4791,7 @@ function createDOMPurify() {
         continue;
       }
       const node = item.node;
-      const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+      const nodeType = _readNodeType(node);
       const isElement = nodeType === NODE_TYPE.element;
       const childNodes = getChildNodes(node);
       if (childNodes) {
@@ -4717,7 +4828,7 @@ function createDOMPurify() {
       }
     }
   };
-  DOMPurify2.sanitize = function(dirty) {
+  DOMPurify.sanitize = function(dirty) {
     let cfg = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
     let body = null;
     let importedNode = null;
@@ -4733,7 +4844,7 @@ function createDOMPurify() {
         throw typeErrorCreate("dirty is not a string, aborting");
       }
     }
-    if (!DOMPurify2.isSupported) {
+    if (!DOMPurify.isSupported) {
       return dirty;
     }
     if (SET_CONFIG) {
@@ -4748,11 +4859,11 @@ function createDOMPurify() {
     if (hooks.uponSanitizeAttribute.length > 0) {
       ALLOWED_ATTR = clone(ALLOWED_ATTR);
     }
-    DOMPurify2.removed = [];
+    DOMPurify.removed = [];
     const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
     if (inPlace) {
       _neutralizePatchLinkage(dirty);
-      const nn = getNodeName ? getNodeName(dirty) : dirty.nodeName;
+      const nn = _readNodeName(dirty);
       if (typeof nn === "string") {
         const tagName = transformCaseFunc(nn);
         if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) {
@@ -4807,7 +4918,7 @@ function createDOMPurify() {
     } catch (error) {
       if (inPlace) {
         _neutralizeRoot(dirty);
-        arrayForEach(DOMPurify2.removed, (entry) => {
+        arrayForEach(DOMPurify.removed, (entry) => {
           if (entry.element) {
             _neutralizeSubtree(entry.element);
           }
@@ -4816,7 +4927,7 @@ function createDOMPurify() {
       throw error;
     }
     if (inPlace) {
-      arrayForEach(DOMPurify2.removed, (entry) => {
+      arrayForEach(DOMPurify.removed, (entry) => {
         if (entry.element) {
           _neutralizeSubtree(entry.element);
         }
@@ -4852,14 +4963,14 @@ function createDOMPurify() {
     }
     return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(serializedHTML) : serializedHTML;
   };
-  DOMPurify2.setConfig = function() {
+  DOMPurify.setConfig = function() {
     let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
     _parseConfig(cfg);
     SET_CONFIG = true;
     SET_CONFIG_ALLOWED_TAGS = ALLOWED_TAGS;
     SET_CONFIG_ALLOWED_ATTR = ALLOWED_ATTR;
   };
-  DOMPurify2.clearConfig = function() {
+  DOMPurify.clearConfig = function() {
     CONFIG = null;
     SET_CONFIG = false;
     SET_CONFIG_ALLOWED_TAGS = null;
@@ -4867,7 +4978,7 @@ function createDOMPurify() {
     trustedTypesPolicy = defaultTrustedTypesPolicy;
     emptyHTML = "";
   };
-  DOMPurify2.isValidAttribute = function(tag, attr, value) {
+  DOMPurify.isValidAttribute = function(tag, attr, value) {
     if (!CONFIG) {
       _parseConfig({});
     }
@@ -4875,7 +4986,7 @@ function createDOMPurify() {
     const lcName = transformCaseFunc(attr);
     return _isValidAttribute(lcTag, lcName, value);
   };
-  DOMPurify2.addHook = function(entryPoint, hookFunction) {
+  DOMPurify.addHook = function(entryPoint, hookFunction) {
     if (typeof hookFunction !== "function") {
       return;
     }
@@ -4884,7 +4995,7 @@ function createDOMPurify() {
     }
     arrayPush(hooks[entryPoint], hookFunction);
   };
-  DOMPurify2.removeHook = function(entryPoint, hookFunction) {
+  DOMPurify.removeHook = function(entryPoint, hookFunction) {
     if (!objectHasOwnProperty(hooks, entryPoint)) {
       return void 0;
     }
@@ -4894,18 +5005,138 @@ function createDOMPurify() {
     }
     return arrayPop(hooks[entryPoint]);
   };
-  DOMPurify2.removeHooks = function(entryPoint) {
+  DOMPurify.removeHooks = function(entryPoint) {
     if (!objectHasOwnProperty(hooks, entryPoint)) {
       return;
     }
     hooks[entryPoint] = [];
   };
-  DOMPurify2.removeAllHooks = function() {
+  DOMPurify.removeAllHooks = function() {
     hooks = _createHooksMap();
   };
-  return DOMPurify2;
+  return DOMPurify;
 }
 var purify = createDOMPurify();
+
+// src/selection.ts
+var EditorSelection = class {
+  #start = 0;
+  #end = 0;
+  #parent_element;
+  #selection_mask;
+  #visible = false;
+  #elems = [];
+  constructor(parent, selection_mask, start, end) {
+    this.#start = start;
+    this.#end = end;
+    this.#parent_element = parent;
+    this.#selection_mask = selection_mask;
+  }
+  // -------------------------------
+  //  Visiblity                            
+  // -------------------------------
+  apply() {
+    this.#visible = true;
+    this.update_render();
+  }
+  discard() {
+    this.#visible = false;
+    this.update_render();
+  }
+  // -------------------------------
+  //  Range handeling                            
+  // -------------------------------
+  set_start(position) {
+    this.#start = position;
+    this.update_render();
+  }
+  set_end(position) {
+    this.#end = position;
+    this.update_render();
+  }
+  move_start(dist) {
+    this.#start += dist;
+    this.update_render();
+  }
+  move_end(dist) {
+    this.#end += dist;
+    this.update_render();
+  }
+  // -------------------------------
+  //  Getters                            
+  // -------------------------------
+  // Lower and higher selection bounds
+  get lo() {
+    return Math.min(this.#start, this.#end);
+  }
+  get hi() {
+    return Math.max(this.#start, this.#end);
+  }
+  get end() {
+    return this.#end;
+  }
+  get start() {
+    return this.#start;
+  }
+  get visible() {
+    return this.#visible;
+  }
+  get length() {
+    return Math.abs(this.#start - this.#end);
+  }
+  // -------------------------------
+  //  Rendering                            
+  // -------------------------------
+  update_render() {
+    for (const elem of this.#elems) {
+      elem.remove();
+    }
+    if (this.#visible) {
+      const start_node = this.#cursor_pos_to_node(Math.min(this.#start, this.#end));
+      const end_node = this.#cursor_pos_to_node(Math.max(this.#start, this.#end));
+      if (start_node === null || end_node === null) return;
+      const range = document.createRange();
+      console.log(start_node, end_node);
+      range.setStart(start_node.node, start_node.offset);
+      range.setEnd(end_node.node, end_node.offset);
+      const parent_rect = this.#parent_element.getBoundingClientRect();
+      for (const rect of range.getClientRects()) {
+        const elem = document.createElement("div");
+        elem.style.left = `${rect.left - parent_rect.left}px`;
+        elem.style.top = `${rect.top - parent_rect.top}px`;
+        elem.style.width = `${rect.width}px`;
+        elem.style.height = `${rect.height}px`;
+        this.#selection_mask.appendChild(elem);
+        this.#elems.push(elem);
+      }
+    }
+  }
+  // -------------------------------
+  //  Utilities                            
+  // -------------------------------
+  // Get the node corresponding to the character position provided
+  #cursor_pos_to_node(position) {
+    if (!this.#parent_element) return null;
+    const walker = document.createTreeWalker(this.#parent_element, NodeFilter.SHOW_TEXT);
+    let offset = 0;
+    while (true) {
+      let node = walker.nextNode();
+      if (!node) return null;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const len = node.nodeValue?.length;
+        if (len === void 0) continue;
+        if (offset + len >= position) {
+          return {
+            "node": node,
+            "offset": position - offset
+            // Calc the local offset inside this node
+          };
+        }
+        offset += len;
+      }
+    }
+  }
+};
 
 // src/main.ts
 var default_options2 = {
@@ -4955,6 +5186,7 @@ var Editor = class {
   #editor;
   #input;
   #text_display;
+  #selection_mask;
   #slider;
   #toggle_check;
   #is_parsing = false;
@@ -5057,11 +5289,13 @@ var Editor = class {
     this.#editor.appendChild(this.#input);
     this.#text_display = document.createElement("div");
     this.#text_display.classList.add("infill-editor-display");
-    this.#text_display.addEventListener("pointerdown", (e) => this.#editor_mouse_down(e));
-    this.#text_display.addEventListener("pointerleave", (e) => this.#editor_mouse_leave(e));
     this.#text_display.addEventListener("pointermove", (e) => this.#editor_mouse_move(e));
-    this.#text_display.addEventListener("pointerup", (e) => this.#editor_mouse_up(e));
+    document.addEventListener("pointerdown", (e) => this.#editor_mouse_down(e));
+    document.addEventListener("pointerup", (e) => this.#editor_mouse_up(e));
     this.#editor.appendChild(this.#text_display);
+    this.#selection_mask = document.createElement("div");
+    this.#selection_mask.classList.add("infill-editor-selection-mask");
+    this.#editor.appendChild(this.#selection_mask);
     document.addEventListener("keydown", (e) => this.#on_key_down(e));
     document.addEventListener("keyup", (e) => this.#on_key_up(e));
     document.addEventListener("paste", (e) => this.#paste_selection(e));
@@ -5088,12 +5322,13 @@ var Editor = class {
     let before = "";
     let after = "";
     let inside = "";
-    if (window.getSelection()?.toString()) {
-      const selection = this.#get_selection();
-      if (selection === null) return;
-      before = this.#input.value.slice(0, this.#last_parse.char_map.absolute_map[selection.start]);
-      inside = this.#input.value.slice(this.#last_parse.char_map.absolute_map[selection.start], this.#last_parse.char_map.absolute_map[selection.end]);
-      after = this.#input.value.slice(this.#last_parse.char_map.absolute_map[selection.end]);
+    console.log(this.#selection);
+    if (this.#selection !== null && this.#selection.visible) {
+      const start = this.#map_cursor_pos(this.#selection.lo);
+      const end = this.#map_cursor_pos(this.#selection.hi);
+      before = this.#input.value.slice(0, start);
+      inside = this.#input.value.slice(start, end);
+      after = this.#input.value.slice(end);
     } else {
       const cursor_pos = this.#input.selectionStart;
       before = this.#input.value.slice(0, cursor_pos);
@@ -5113,8 +5348,10 @@ var Editor = class {
       after = after_cursor + after;
       this.#input.value = before + inside + after;
     }
-    window.setTimeout(() => this.set_cursor(before.length + inside.length, true), 1);
+    window.setTimeout(() => this.set_cursor(before.length + inside.length), 1);
+    if (force_linebreak) this.#selection?.discard();
     this.#update_markdown_render();
+    if (this.#selection !== null && this.#selection.visible) this.#selection.update_render();
   }
   // -------------------------------
   //  Slider                            
@@ -5151,7 +5388,8 @@ var Editor = class {
     "html": "",
     "char_map": {
       "absolute_map": [],
-      "width_map": []
+      "width_map": [],
+      "line_map": []
     }
   };
   #update_markdown_render() {
@@ -5163,104 +5401,9 @@ var Editor = class {
     this.#last_parse = parse(markdown_input);
     if (this.#last_parse.html === void 0) throw Error("[Infill]: whoops something went horribly wrong whilst parsing markdown. Please make an issue on github immediately.");
     console.log(this.#last_parse.html);
-    let text2 = this.#last_parse.html;
+    let text2 = purify.sanitize(this.#last_parse.html);
     console.log(this.#last_parse.html);
     this.#text_display.innerHTML = text2.replaceAll("\uE003", '<i class="infill-editor-cursor"></i>');
-  }
-  // -------------------------------
-  //  Editor cursor stuff                           
-  // -------------------------------
-  #selection_start = null;
-  #selection_start_pos = [0, 0];
-  #selection_end = 0;
-  #mouse_down = false;
-  #has_selection = false;
-  #editor_mouse_down(e) {
-    this.#mouse_down = true;
-    this.#has_selection = false;
-    this.#selection_start_pos = [e.clientX, e.clientY];
-    const cursor = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-    this.#selection_start = cursor ? cursor : null;
-  }
-  #editor_mouse_leave(e) {
-  }
-  #editor_mouse_move(e) {
-    if (this.#mouse_down) {
-      const cursor = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-      console.log(cursor);
-      if (cursor !== void 0) this.#selection_end = cursor;
-    }
-    if (this.#mouse_down && !this.#has_selection) {
-      let start_x = this.#selection_start_pos[0];
-      let start_y = this.#selection_start_pos[1];
-      if (start_x === void 0 || start_y === void 0) return;
-      let dist = (start_x - e.clientX) ** 2 + (start_y - e.clientY) ** 2;
-      if (dist >= 64) {
-        console.log("SELECT!");
-        this.#has_selection = true;
-      }
-    }
-  }
-  #editor_mouse_up(e) {
-    if (this.#mouse_down) {
-      const cursor = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-      if (cursor !== void 0) this.#selection_end = cursor;
-      if (!this.#has_selection && !window.getSelection()?.toString()) {
-        let result = this.#get_carret_position_from_point(this.#text_display, e.clientX, e.clientY);
-        console.log(result?.global);
-        if (result !== null && result.global !== void 0) {
-          let mapped_cursor_pos = this.#last_parse.char_map.absolute_map[result.global];
-          if (mapped_cursor_pos !== void 0) this.set_cursor(mapped_cursor_pos);
-        } else {
-          this.set_cursor(this.#input.value.length);
-        }
-      }
-    }
-    this.#mouse_down = false;
-  }
-  set_cursor(position, no_focus = false) {
-    this.#text_display.querySelector(".infill-editor-cursor")?.classList.add("infill-cursor-force-mark");
-    window.setTimeout(() => this.#text_display.querySelector(".infill-editor-cursor")?.classList.remove("infill-cursor-force-mark"), 500);
-    if (!no_focus) this.#input.focus();
-    this.#input.selectionStart = position;
-    this.#input.selectionEnd = position;
-    this.#update_markdown_render();
-  }
-  // Get the cursor position inside an element depending on the location at which we clicked
-  #get_carret_position_from_point(root_element, x, y) {
-    let carret_node;
-    let local_offset = 0;
-    if (typeof document.caretPositionFromPoint === "function") {
-      let carret_position = document.caretPositionFromPoint(x, y);
-      if (!carret_position) return null;
-      carret_node = carret_position.offsetNode;
-      local_offset = carret_position.offset;
-    } else if (typeof document.caretRangeFromPoint === "function") {
-      let carret_position = document.caretRangeFromPoint(x, y);
-      if (!carret_position) return null;
-      carret_node = carret_position.startContainer;
-      local_offset = carret_position.startOffset;
-    } else {
-      console.warn("You're using an older browser, selecting in the editor is not supported here!");
-      return null;
-    }
-    const walker = document.createTreeWalker(root_element, NodeFilter.SHOW_ALL);
-    let offset = 0;
-    while (true) {
-      let node = walker.nextNode();
-      if (!node) return null;
-      if (node.nodeType === Node.TEXT_NODE) {
-        if (carret_node === node) {
-          offset += local_offset;
-          break;
-        }
-        if (node.textContent) offset += node.textContent.length;
-      }
-    }
-    return {
-      "global": offset,
-      "local": local_offset
-    };
   }
   // ==========================================================================================================================================
   // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -5270,19 +5413,10 @@ var Editor = class {
   #on_key_down(e) {
     const key = e.key.toLowerCase();
     const is_shortcut = document.activeElement === this.#input && this.#options.keyboard_shortcuts_enabled && e.getModifierState("Control") && !(e.getModifierState("Alt") || e.getModifierState("Shift"));
-    if (window.getSelection()?.toString() && (e.key === "Backspace" || e.key === "Delete")) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.#replace_selection("");
-    }
-    if (window.getSelection()?.toString() && e.key.length === 1 && !e.getModifierState("Control") && !e.getModifierState("Alt")) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.#replace_selection(e.key);
-    }
     if ((key === "arrowleft" || key === "arrowright" || key === "arrowup" || key === "arrowdown") && !(e.getModifierState("Shift") || e.getModifierState("Ctrl"))) {
       window.setTimeout(() => this.#update_markdown_render(), 1);
-    } else if (key === "h" && is_shortcut) {
+    }
+    if (key === "h" && is_shortcut) {
       this.#insert_text("# ", "", true);
     } else if (key === "q" && is_shortcut) {
       this.#insert_text("> ", "", true);
@@ -5310,145 +5444,329 @@ var Editor = class {
       this.#insert_text("[", "]()", false);
     } else if (key === "p" && is_shortcut) {
       this.#insert_text("![]()", "", false);
-    } else if ((key === "arrowleft" || key === "arrowright" || key === "arrowup" || key === "arrowdown") && e.getModifierState("Shift") && document.activeElement === this.#input) {
-      const input_cursor_pos = this.#input.selectionStart;
-      const output_cursor_pos = this.#last_parse.char_map.absolute_map.indexOf(input_cursor_pos);
-      this.#select_text(this.#text_display, output_cursor_pos, output_cursor_pos);
-    } else if (key === "a" && e.getModifierState("Control") && !e.getModifierState("Shift")) {
-      this.#select_all(e);
     }
     if (is_shortcut && "hqetbisumdlorp".includes(key)) {
       e.preventDefault();
       e.stopPropagation();
     }
+    if (e.key.length === 1 && !e.getModifierState("Control") && !e.getModifierState("Alt") && this.#selection !== null && this.#selection.visible) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.#replace_selection(e.key);
+    }
+    if ((e.key === "Delete" || e.key === "Backspace") && this.#selection !== null && this.#selection.visible) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.#replace_selection("");
+    }
+    if (e.key === "ArrowLeft") this.#select_left(e, e.getModifierState("Control"));
+    if (e.key === "ArrowRight" && e.getModifierState("Shift")) this.#select_right(e, e.getModifierState("Control"));
+    if (e.key === "ArrowUp" && e.getModifierState("Shift")) this.#select_up(e);
+    if (e.key === "ArrowDown" && e.getModifierState("Shift")) this.#select_down(e);
   }
   #on_key_up(e) {
   }
   // ==========================================================================================================================================
   // ------------------------------------------------------------------------------------------------------------------------------------------
-  //                                                        FIX SELECTIONS                                                                       
+  //                                                          DETECT MOUSE EVENTS                                                            
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // ==========================================================================================================================================
-  // Get the start and end pos of the last selection
-  #get_selection() {
-    const sel_start = this.#selection_start;
-    const sel_end = this.#selection_end;
-    if (sel_start === null) return null;
-    const start_char = Math.min(sel_start, sel_end);
-    let end_char = Math.max(sel_start, sel_end);
-    if (start_char === void 0 || end_char === void 0) return null;
-    if (end_char === this.#last_parse.char_map.absolute_map.length - 1) end_char = this.#input.value.length - 1;
-    return { "start": start_char, "end": end_char };
+  // -------------------------------
+  //  Detect clicking vs selecting                         
+  // -------------------------------
+  #selection = null;
+  #anchor_pos = [0, 0];
+  #mouse_down = false;
+  #has_selection = false;
+  // -------------------------------
+  //  Mouse down                            
+  // -------------------------------
+  #editor_mouse_down(e) {
+    if (e.target === null || !(e.target instanceof Node)) return;
+    if (this.#editor.contains(e.target)) {
+      this.#mouse_down = true;
+      this.#has_selection = false;
+      this.#anchor_pos = [e.clientX, e.clientY];
+      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+      this.#selection?.discard();
+      if (cursor === void 0) return this.#selection = null;
+      this.#target_line_offs = null;
+      this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
+    } else if (!this.#nav.contains(e.target)) {
+      this.#selection?.discard();
+    }
   }
-  // Check if the display element contains the currently selected text
-  #contains_selection() {
-    const sel = document.getSelection();
-    if (sel === null || !sel.toString()) return false;
-    const curr_sel = sel.getRangeAt(0);
-    return this.#wrapper.contains(curr_sel.startContainer) && this.#wrapper.contains(curr_sel.endContainer);
+  // -------------------------------
+  //  Mouse move                            
+  // -------------------------------
+  #editor_mouse_move(e) {
+    if (this.#mouse_down) {
+      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+      if (cursor !== void 0) this.#selection?.set_end(cursor);
+    }
+    if (this.#mouse_down && !this.#has_selection) {
+      let start_x = this.#anchor_pos[0];
+      let start_y = this.#anchor_pos[1];
+      if (start_x === void 0 || start_y === void 0) return;
+      let dist = (start_x - e.clientX) ** 2 + (start_y - e.clientY) ** 2;
+      if (dist >= 64) {
+        this.#selection?.apply();
+        this.#has_selection = true;
+        this.#target_line_offs = null;
+      }
+    }
   }
-  // Replace a selection when typing
+  // -------------------------------
+  //  Mouse Up                            
+  // -------------------------------
+  #editor_mouse_up(e) {
+    if (this.#mouse_down) {
+      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+      if (cursor !== void 0) this.#selection?.set_end(cursor);
+      if (!this.#has_selection && !window.getSelection()?.toString()) {
+        if (cursor) {
+          const mapped_pos = this.#map_cursor_pos(cursor);
+          if (mapped_pos !== void 0) this.set_cursor(mapped_pos);
+        } else {
+          this.set_cursor(this.#input.value.length);
+        }
+        this.#update_markdown_render();
+      }
+    }
+    this.#mouse_down = false;
+  }
+  // ==========================================================================================================================================
+  // ------------------------------------------------------------------------------------------------------------------------------------------
+  //                                                       HANDLE CURSORS                                                                       
+  // ------------------------------------------------------------------------------------------------------------------------------------------
+  // ==========================================================================================================================================
+  // -------------------------------
+  //  Helpers                            
+  // -------------------------------
+  set_cursor(position, no_focus = false, no_update = false) {
+    this.#text_display.querySelector(".infill-editor-cursor")?.classList.add("infill-cursor-force-mark");
+    window.setTimeout(() => this.#text_display.querySelector(".infill-editor-cursor")?.classList.remove("infill-cursor-force-mark"), 500);
+    if (!no_focus) this.#input.focus();
+    this.#input.selectionStart = position;
+    this.#input.selectionEnd = position;
+    if (!no_update) this.#update_markdown_render();
+  }
+  // Map a cursor pos from html to markdown
+  #map_cursor_pos(position) {
+    return this.#last_parse.char_map.absolute_map[position];
+  }
+  // Map a cusor pos from markdown to html
+  #inverse_map_cursor_pos(position, map = this.#last_parse.char_map.absolute_map) {
+    const last_item = map[map.length - 1];
+    const first_item = map[0];
+    let mapped = map.indexOf(position);
+    if (last_item !== void 0 && position > last_item) return -1;
+    if (first_item !== void 0 && position < first_item) return -1;
+    while (mapped === -1 && position > 0) {
+      position--;
+      mapped = map.indexOf(position);
+    }
+    return mapped;
+  }
+  // ==========================================================================================================================================
+  // ------------------------------------------------------------------------------------------------------------------------------------------
+  //                                                      HANDLE SELECTIONS                                                                       
+  // ------------------------------------------------------------------------------------------------------------------------------------------
+  // ==========================================================================================================================================
+  // -------------------------------
+  //  Helpers                            
+  // -------------------------------
+  // Replace selected text with a replacement string
   #replace_selection(value) {
-    const selection = this.#get_selection();
-    if (selection === null || value === void 0) return;
-    let start = this.#last_parse.char_map.absolute_map[selection.start];
-    let end = this.#last_parse.char_map.absolute_map[selection.end];
-    if (start === void 0) return;
-    let before = this.#input.value.slice(0, start);
-    let after = this.#input.value.slice(end);
+    if (this.#selection === null || value === void 0) return null;
+    const start = this.#map_cursor_pos(this.#selection.lo);
+    const end = this.#map_cursor_pos(this.#selection.hi);
+    if (start === void 0) return null;
+    const before = this.#input.value.slice(0, start);
+    const inside = this.#input.value.slice(start, end);
+    const after = this.#input.value.slice(end);
     this.#input.value = before + value + after;
     this.#update_markdown_render();
-    this.set_cursor(before.length + value.length);
+    this.set_cursor(start + value.length);
+    this.#selection.discard();
+    return inside;
   }
-  #paste_selection(e) {
-    const text2 = e.clipboardData?.getData("text");
-    if (window.getSelection()?.toString()) {
+  // get the line idx corresponding to a character offset
+  #get_line_idx(offs) {
+    let line_idx = 0;
+    for (let i = 0; i < offs; i++) {
+      if (this.#input.value.charAt(i) === "\n") {
+        line_idx++;
+      }
+    }
+    return line_idx;
+  }
+  // -------------------------------
+  //  Copy                            
+  // -------------------------------
+  #copy_selection(e) {
+    if (this.#selection !== null && this.#selection.visible) {
       e.preventDefault();
       e.stopPropagation();
-      this.#replace_selection(text2);
+      const start = this.#map_cursor_pos(this.#selection.lo);
+      const end = this.#map_cursor_pos(this.#selection.hi);
+      const selected = this.#input.value.slice(start, end);
+      e.clipboardData?.setData("text", selected);
     }
   }
-  #copy_selection(e) {
-    const selection = this.#get_selection();
-    if (!this.#contains_selection()) return;
-    if (!selection) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const end = this.#last_parse.char_map.absolute_map[selection.end];
-    const start = this.#last_parse.char_map.absolute_map[selection.start];
-    let inside = this.#input.value.slice(start, end);
-    e.clipboardData?.setData("text", inside);
+  // -------------------------------
+  //  Paste                            
+  // -------------------------------
+  #paste_selection(e) {
+    if (this.#selection !== null && this.#selection.visible) {
+      e.preventDefault();
+      e.stopPropagation();
+      const replacement = e.clipboardData?.getData("text");
+      if (replacement === void 0) return;
+      this.#replace_selection(replacement);
+    }
   }
+  // -------------------------------
+  //  Cut                            
+  // -------------------------------
   #cut_selection(e) {
-    const selection = this.#get_selection();
-    if (!this.#contains_selection()) return;
-    if (!selection) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const end = this.#last_parse.char_map.absolute_map[selection.end];
-    const start = this.#last_parse.char_map.absolute_map[selection.start];
-    let inside = this.#input.value.slice(start, end);
-    let before = this.#input.value.slice(0, start);
-    let after = this.#input.value.slice(end);
-    this.#input.value = before + after;
-    this.#update_markdown_render();
-    this.set_cursor(before.length);
-    e.clipboardData?.setData("text", inside);
+    if (this.#selection !== null && this.#selection.visible) {
+      e.preventDefault();
+      e.stopPropagation();
+      const inside = this.#replace_selection("");
+      if (inside === null) return;
+      e.clipboardData?.setData("text", inside);
+    }
   }
-  #select_all(e) {
-    if (!this.#contains_selection() && this.#input !== document.activeElement) return;
+  // -------------------------------
+  //  Select with shift                            
+  // -------------------------------
+  // Main helper
+  #select(dist) {
+    const cursor = this.#inverse_map_cursor_pos(this.#input.selectionStart);
+    console.log(cursor);
+    if (cursor === void 0) return;
+    if (this.#selection === null || !this.#selection.visible) {
+      this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
+      this.#selection.apply();
+    }
+    const final_dist = Math.max(
+      Math.min(
+        dist,
+        this.#last_parse.char_map?.absolute_map.length - this.#selection.end - 2
+      ),
+      -this.#selection.end
+    );
+    console.log(dist, final_dist, this.#selection.end);
+    if (final_dist !== 0) this.#selection.move_end(final_dist);
+    if (this.#selection.length === 0) {
+      const sel = this.#map_cursor_pos(this.#selection.end);
+      if (sel !== void 0) this.set_cursor(sel);
+      this.#selection.discard();
+    } else if (this.#selection !== null) {
+      const sel = this.#map_cursor_pos(this.#selection.end);
+    }
+  }
+  #target_line_offs = 0;
+  #select_left(e, ctrl) {
+    if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    const range = document.createRange();
-    range.selectNodeContents(this.#text_display);
-    const last_elem = this.#input.value.length;
-    if (last_elem) {
-      this.#selection_start = 0;
-      this.#selection_end = last_elem;
+    console.log("SELECT");
+    if (ctrl) {
+      const cursor_pos = this.#input.selectionStart;
+      const line_idx = this.#get_line_idx(cursor_pos);
+      const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+      if (curr_line_map == void 0) return;
+      let end_line_offset = curr_line_map.indexOf(cursor_pos);
+      if (end_line_offset === -1) end_line_offset = curr_line_map.length;
+      this.#select(-end_line_offset - 1);
     } else {
-      this.#selection_start = null;
+      this.#select(-1);
     }
-    this.#input.blur();
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
+    this.#target_line_offs = null;
   }
-  #select_text(elem, start, end) {
-    const walker = document.createTreeWalker(
-      elem,
-      NodeFilter.SHOW_TEXT
-    );
-    let position = 0;
-    let startNode = null;
-    let startOffset = 0;
-    let endNode = null;
-    let endOffset = 0;
-    let node;
-    while (node = walker.nextNode()) {
-      if (node.nodeValue === null) return;
-      const length = node.nodeValue.length;
-      if (startNode === null && start <= position + length) {
-        startNode = node;
-        startOffset = start - position;
-      }
-      if (end <= position + length) {
-        endNode = node;
-        endOffset = end - position;
-        break;
-      }
-      position += length;
+  #select_right(e, ctrl) {
+    if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (ctrl) {
+      const cursor_pos = this.#input.selectionStart;
+      const line_idx = this.#get_line_idx(cursor_pos);
+      const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+      if (curr_line_map == void 0) return;
+      let end_line_offset = curr_line_map.indexOf(cursor_pos);
+      if (end_line_offset === -1) end_line_offset = curr_line_map.length;
+      this.#select(curr_line_map.length - end_line_offset);
+    } else {
+      this.#select(1);
     }
-    if (!startNode || !endNode) return;
-    const selection = window.getSelection();
-    if (selection === null) return;
-    selection.removeAllRanges();
-    selection.setBaseAndExtent(
-      startNode,
-      startOffset,
-      endNode,
-      endOffset
-    );
-    this.#input.blur();
+    this.#target_line_offs = null;
+  }
+  #select_up(e) {
+    if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.#update_markdown_render();
+    const cursor_pos = this.#input.selectionStart;
+    let line_idx = this.#get_line_idx(cursor_pos);
+    if (this.#selection !== null && this.#selection.visible) {
+      const mapped_pos = this.#map_cursor_pos(this.#selection.end);
+      if (!mapped_pos) return;
+      line_idx = this.#get_line_idx(mapped_pos);
+    }
+    const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+    const prev_line_map = this.#last_parse.char_map.line_map[line_idx - 1];
+    if (curr_line_map === void 0) return;
+    const line_start_idx = curr_line_map[0];
+    let end_line_offset = this.#selection?.end;
+    if (end_line_offset === void 0 || !this.#selection?.visible) end_line_offset = this.#inverse_map_cursor_pos(cursor_pos);
+    if (line_start_idx !== void 0) end_line_offset -= this.#inverse_map_cursor_pos(line_start_idx);
+    if (end_line_offset === -1) end_line_offset = curr_line_map.length;
+    if (this.#target_line_offs === null) {
+      if (end_line_offset === void 0) return;
+      this.#target_line_offs = end_line_offset;
+    }
+    console.log("LINE OFFS", this.#target_line_offs, end_line_offset, line_start_idx);
+    console.log(prev_line_map);
+    if (prev_line_map === void 0) {
+      this.#select(-end_line_offset);
+    } else {
+      console.log(end_line_offset, Math.max(prev_line_map.length - this.#target_line_offs, 1));
+      const select_length = end_line_offset + Math.max(prev_line_map.length - this.#target_line_offs, 1);
+      this.#select(-select_length);
+    }
+  }
+  #select_down(e) {
+    if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.#update_markdown_render();
+    const cursor_pos = this.#input.selectionStart;
+    let line_idx = this.#get_line_idx(cursor_pos);
+    if (this.#selection !== null && this.#selection.visible) {
+      const mapped_pos = this.#map_cursor_pos(this.#selection.end);
+      if (!mapped_pos) return;
+      line_idx = this.#get_line_idx(mapped_pos);
+    }
+    const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+    const next_line_map = this.#last_parse.char_map.line_map[line_idx + 1];
+    if (curr_line_map === void 0) return;
+    const line_start_idx = curr_line_map[0];
+    let end_line_offset = this.#selection?.end;
+    if (end_line_offset === void 0 || !this.#selection?.visible) end_line_offset = this.#inverse_map_cursor_pos(cursor_pos);
+    if (line_start_idx !== void 0) end_line_offset -= this.#inverse_map_cursor_pos(line_start_idx);
+    if (this.#target_line_offs === null) {
+      if (end_line_offset === void 0) return;
+      this.#target_line_offs = end_line_offset;
+    }
+    console.log("LINE OFFS", this.#target_line_offs, end_line_offset);
+    if (next_line_map === void 0) {
+      this.#select(curr_line_map.length - end_line_offset);
+    } else {
+      const select_length = curr_line_map.length - end_line_offset + Math.min(this.#target_line_offs, next_line_map.length) - 1;
+      this.#select(select_length);
+    }
   }
 };
 export {
@@ -5468,5 +5786,5 @@ prismjs/prism.js:
    *)
 
 dompurify/dist/purify.es.mjs:
-  (*! @license DOMPurify 3.4.13 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.13/LICENSE *)
+  (*! @license DOMPurify 3.4.14 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.14/LICENSE *)
 */

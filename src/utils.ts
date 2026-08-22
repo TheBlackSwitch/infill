@@ -11,6 +11,10 @@
 // ------------------------------------------------------------------------------------------------------------------------------------------
 // ==========================================================================================================================================
 
+// -------------------------------
+//  Strings                            
+// -------------------------------
+
 // escapes ALL special characters in a string
 export function escape_string(input: string) {
     // Using a neat little js trick I found
@@ -29,4 +33,58 @@ export function escape_string(input: string) {
 
         return `&#${code};`;
     }).join("");
+}
+
+// -------------------------------
+//  Cursor positions                      
+// -------------------------------
+
+// Get the cursor position inside an element depending on the location at which we clicked
+export function cursor_pos_from_point(root_element: HTMLElement, x: number, y: number) {
+    let carret_node: Node;
+    let local_offset: number = 0;
+
+    // get the carret position on a node
+    if(typeof document.caretPositionFromPoint === "function") {
+        let carret_position = document.caretPositionFromPoint(x, y);
+        if(!carret_position) return null;
+        carret_node = carret_position.offsetNode;
+        local_offset = carret_position.offset;
+
+    // Browser compat
+    } else if(typeof document.caretRangeFromPoint === "function") {
+        let carret_position = document.caretRangeFromPoint(x, y);
+        if(!carret_position) return null;
+        carret_node = carret_position.startContainer;
+        local_offset = carret_position.startOffset;
+
+    } else {
+        console.warn("You're using an older browser, selecting in the editor is not supported here!");
+        return null;
+    }
+
+    // Create a walker to go through all text nodes
+    const walker = document.createTreeWalker(root_element, NodeFilter.SHOW_ALL); 
+
+    let offset = 0;
+
+    // Go through all text nodes <p></p> <strong></strong> etc. and calculate the global offset until we've found the correct node.
+    while(true) { 
+        let node = walker.nextNode();
+        if(!node) return null;
+        
+        if(node.nodeType === Node.TEXT_NODE) {
+            if(carret_node === node) {
+                offset += local_offset;
+                break;
+            }
+            if(node.textContent) offset += node.textContent.length;
+        }
+        
+    }
+
+    return {
+        "global": offset,
+        "local": local_offset
+    };
 }

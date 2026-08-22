@@ -29,6 +29,7 @@
 
     --infill-editor-background-color: #323232;
     --infill-editor-border-radius: 0px 0px 5px 5px;
+    --infill-editor-selection-color: #4433FF;
 
     --infill-html-highlight-color: #aaa;
 }
@@ -397,6 +398,7 @@
     padding: 5px;
     background-color: var(--infill-editor-background-color);
     cursor: text;
+    user-select: none;
 }
 
 /* ============================== //
@@ -465,6 +467,28 @@
     100% {
         opacity: 0.0;
     }
+}
+
+/* ============================== //
+//  Selecting                              
+// ============================== */
+
+.infill-editor-selection-mask {
+    opacity: 0.5;
+    position: absolute;
+    display: block;
+    width: 100%;
+    height: 100%;
+    top: 0px;
+    left: 0px;
+    user-select: none;
+    pointer-events: none;
+}
+
+
+.infill-editor-selection-mask > div {
+    background-color: var(--infill-editor-selection-color);
+    position: absolute;
 }
 
 
