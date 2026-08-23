@@ -1,3 +1,4 @@
+"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -6,6 +7,10 @@ var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -23,10 +28,11 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // node_modules/prismjs/prism.js
 var require_prism = __commonJS({
-  "node_modules/prismjs/prism.js"(exports, module) {
+  "node_modules/prismjs/prism.js"(exports2, module2) {
     "use strict";
     var _self = typeof window !== "undefined" ? window : typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope ? self : {};
     var Prism2 = (function(_self2) {
@@ -915,8 +921,8 @@ var require_prism = __commonJS({
       }
       return _;
     })(_self);
-    if (typeof module !== "undefined" && module.exports) {
-      module.exports = Prism2;
+    if (typeof module2 !== "undefined" && module2.exports) {
+      module2.exports = Prism2;
     }
     if (typeof global !== "undefined") {
       global.Prism = Prism2;
@@ -1473,6 +1479,14 @@ var require_prism = __commonJS({
     })();
   }
 });
+
+// src/main.ts
+var main_exports = {};
+__export(main_exports, {
+  Editor: () => Editor,
+  default_options: () => default_options2
+});
+module.exports = __toCommonJS(main_exports);
 
 // src/utils.ts
 function download_file(data, filename, type) {
@@ -5152,6 +5166,7 @@ var EditorSelection = class {
 };
 
 // src/main.ts
+var import_meta = {};
 var default_options2 = {
   "nav": {
     "header": true,
@@ -5229,7 +5244,7 @@ var Editor = class {
       "finalize_spaces": true,
       "literal_mid_word_underscores": true
     });
-    this.#parse_worker = new Worker(new URL("./workers/parse.ts", import.meta.url), { type: "module" });
+    this.#parse_worker = new Worker(new URL("./workers/parse.ts", import_meta.url), { type: "module" });
     this.#wrapper = document.createElement("div");
     this.#wrapper.classList.add("infill-editor-wrapper");
     this.#parent_element.appendChild(this.#wrapper);
@@ -5954,10 +5969,11 @@ var Editor = class {
     download_file(this.#input.value, default_file_name, "text/plain");
   }
 };
-export {
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
   Editor,
-  default_options2 as default_options
-};
+  default_options
+});
 /*! Bundled license information:
 
 prismjs/prism.js:

@@ -16,7 +16,7 @@ import type { absolute_map, options } from "./public_types";
 import * as YAMP from "@theblackswitch/yamp";
 import './prismjs_highlight/mcfunction';
 import DOMPurify from 'dompurify'
-import { cursor_pos_from_point } from './utils';
+import { cursor_pos_from_point, download_file } from './utils';
 import { EditorSelection } from './selection';
 
 // ==========================================================================================================================================
@@ -561,6 +561,7 @@ export class Editor {
 
     #editor_mouse_down(e: MouseEvent) {
         if(e.target === null || !(e.target instanceof Node)) return;
+        if(!this.#toggle_check.checked) return;
 
         
         if(this.#editor.contains(e.target)) {
@@ -589,6 +590,7 @@ export class Editor {
     // -------------------------------
 
     #editor_mouse_move(e: MouseEvent) {
+        if(!this.#toggle_check.checked) return;
 
         // Update the selection
         if(this.#mouse_down) {
@@ -616,6 +618,7 @@ export class Editor {
     // -------------------------------
 
     #editor_mouse_up(e: MouseEvent) {
+        if(!this.#toggle_check.checked) return;
         if(this.#mouse_down) {
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
             if(cursor !== undefined) this.#selection?.set_end(cursor);
@@ -751,6 +754,7 @@ export class Editor {
     // -------------------------------
 
     #copy_selection(e: ClipboardEvent) {
+        if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
             e.preventDefault();
             e.stopPropagation();
@@ -769,6 +773,7 @@ export class Editor {
     // -------------------------------
 
     #paste_selection(e: ClipboardEvent) {
+        if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
             e.preventDefault();
             e.stopPropagation();
@@ -786,6 +791,7 @@ export class Editor {
     // -------------------------------
 
     #cut_selection(e: ClipboardEvent) {
+        if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
             e.preventDefault();
             e.stopPropagation();
@@ -802,6 +808,7 @@ export class Editor {
     // -------------------------------
 
     #select_all(e: KeyboardEvent) {
+        if(!this.#toggle_check.checked) return;
         const abs_map = this.#last_parse.char_map.absolute_map;
 
         if(this.#selection === null || !this.#selection.visible) {
@@ -825,6 +832,7 @@ export class Editor {
 
     // Main helper
     #select_distance(dist: number) {
+        if(!this.#toggle_check.checked) return;
         const cursor_md_pos = this.#input.selectionStart;
         const cursor_html_pos = this.#inverse_map_cursor_pos(cursor_md_pos);
 
@@ -853,6 +861,7 @@ export class Editor {
     #selection_anchor: number = 0;
 
     #select_left(e: KeyboardEvent, ctrl: boolean) {
+        if(!this.#toggle_check.checked) return;
         
         if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
         e.preventDefault();
@@ -915,6 +924,7 @@ export class Editor {
     }
 
     #select_right(e: KeyboardEvent, ctrl: boolean) {
+        if(!this.#toggle_check.checked) return;
         if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
         e.preventDefault();
         e.stopPropagation();
@@ -980,6 +990,7 @@ export class Editor {
     }
 
     #select_up(e: KeyboardEvent) {
+        if(!this.#toggle_check.checked) return;
         if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1034,6 +1045,7 @@ export class Editor {
     }
 
     #select_down(e: KeyboardEvent) {
+        if(!this.#toggle_check.checked) return;
         if((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1096,6 +1108,7 @@ export class Editor {
     // Escape the selection whilst leaving the cursor position at the end of the selection
     #escape_selection(e: KeyboardEvent | null = null, cursor_pos: number | undefined = undefined, unit_html: boolean = true) {
         if(this.#selection === null || !this.#selection.visible) return;
+        if(!this.#toggle_check.checked) return;
 
         // Optionally move the cursor pos
         if(cursor_pos !== undefined) {
@@ -1124,6 +1137,7 @@ export class Editor {
     // Escape a selection on the left
     #escape_selection_up(e: KeyboardEvent) {
         if(this.#selection === null || !this.#selection.visible) return;
+        if(!this.#toggle_check.checked) return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -1146,6 +1160,7 @@ export class Editor {
     // Escape a selection on the left
     #escape_selection_down(e: KeyboardEvent) {
         if(this.#selection === null || !this.#selection.visible) return;
+        if(!this.#toggle_check.checked) return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -1178,5 +1193,29 @@ export class Editor {
         input.setAttribute('type', 'file');
         input.setAttribute('accept', '.txt,.md');
         input.click();
+        input.addEventListener('change', (e) => {
+            let file = input.files?.[0];
+            let reader = new FileReader();
+
+            input.value = ""; // Reset for next time
+
+            if (!file) return; // Stop when there is no file
+
+            reader.readAsText(file, "UTF-8");
+            reader.addEventListener('load', (e) => {
+                const result = reader.result;
+                if(typeof result === "string") this.#input.value = result;
+
+                this.#update_markdown_render();
+            });
+        });
+    }
+
+    #export_file() {
+        const curr_date = new Date();
+
+        let default_file_name = `infill_export_${curr_date.getDate()}-${curr_date.getMonth() + 1}_${curr_date.getHours()}-${curr_date.getMinutes()}.md`;
+
+        download_file(this.#input.value, default_file_name, 'text/plain');
     }
 }

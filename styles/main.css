@@ -13,6 +13,7 @@
 
     --infill-nav-background-color: #424242;
     --infill-nav-border-radius: 5px 5px 0px 0px;
+    --infill-nav-bottom-border-radius: 0px 0px 5px 5px;
     --infill-nav-block-separator-color: #3A3A3A;
     
     --infill-nav-gutter-color: #3A3A3A;
@@ -28,7 +29,6 @@
     --infill-nav-button-border-radius: 3px;
 
     --infill-editor-background-color: #323232;
-    --infill-editor-border-radius: 0px 0px 5px 5px;
     --infill-editor-selection-color: #4433FF;
 
     --infill-html-highlight-color: #aaa;
@@ -129,7 +129,9 @@
 // ------------------------------------------------------------------------------------------------------------------------------------------ //
 // ========================================================================================================================================== */
 
-
+/* ============================== //
+//  Top nav bar                              
+// ============================== */
 
 .infill-editor-nav {
     background-color: var(--infill-nav-background-color);
@@ -171,6 +173,22 @@
 
 .infill-nav-btn:active {
     transform: scale(var(--infill-nav-button-active-zoom));
+}
+
+/* ============================== //
+//  Bottom nav bar                              
+// ============================== */
+
+.infill-editor-bottom-nav {
+    background-color: var(--infill-nav-background-color);
+    border-radius: var(--infill-nav-bottom-border-radius);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: right;
+    gap: 2px;
+    padding: 3px;
+    height: 29px;
 }
 
 /* ============================== //
@@ -374,7 +392,7 @@
 
 .infill-editor-wrapper {
     display: grid;
-    grid-template-rows: max-content auto;
+    grid-template-rows: max-content auto max-content;
 }
 
 .infill-editor {
@@ -400,13 +418,11 @@
     position: absolute;
     display: block;
     width: calc(100% - 18px);
-    height: calc(100% - 18px);
+    height: calc(100% - 10px);
     top: 0px;
     left: 0px;
     border-left: 4px solid var(--infill-nav-background-color);
     border-right: 4px solid var(--infill-nav-background-color);
-    border-bottom: 4px solid var(--infill-nav-background-color);
-    border-radius: var(--infill-editor-border-radius);
     padding: 5px;
     background-color: var(--infill-editor-background-color);
     cursor: text;
@@ -426,7 +442,7 @@
     border-right: 4px solid var(--infill-nav-background-color);
     border-bottom: 4px solid var(--infill-nav-background-color);
     width: calc(100% - 18px);
-    height: calc(100% - 18px);
+    height: calc(100% - 10px);
     opacity: 1;
     padding: 5px;
     background-color: var(--infill-editor-background-color);
