@@ -19,6 +19,12 @@ import DOMPurify from 'dompurify'
 import { cursor_pos_from_point, download_file } from './utils';
 import { EditorSelection } from './selection';
 
+interface history_item {
+    input_value: string,
+    cursor_pos: number,
+    is_character_change: boolean
+}
+
 // ==========================================================================================================================================
 // ------------------------------------------------------------------------------------------------------------------------------------------
 //                                                               MAIN PIPELINE                                                                       
@@ -79,6 +85,11 @@ export class Editor {
     #selection_mask: HTMLElement;
     #slider: HTMLInputElement;
     #toggle_check: HTMLInputElement;
+
+    #history: {undo_states: Array<history_item>, redo_states: Array<history_item>} = {
+        "undo_states": [],
+        "redo_states": []
+    }
 
     #is_parsing: boolean = false;
 
@@ -245,6 +256,8 @@ export class Editor {
 
         this.#gen_btn(this.#bott_nav, () => this.#export_file(), '<i class="infill-icon infill-icon-export"></i>', 'Export File');
         this.#gen_btn(this.#bott_nav, () => this.#import_file(), '<i class="infill-icon infill-icon-import"></i>', 'Open File');
+
+        this.#register_history_state();
     }
 
     // -------------------------------
@@ -312,7 +325,8 @@ export class Editor {
         if(force_linebreak) this.#selection?.discard();
 
         this.#update_markdown_render();
-        if(this.#selection !== null && this.#selection.visible) this.#selection.update_render()
+        if(this.#selection !== null && this.#selection.visible) this.#selection.update_render();
+        this.#register_history_state();
     }
 
     // -------------------------------
@@ -342,6 +356,7 @@ export class Editor {
 
         if(enabled) {
             this.#wrapper.classList.remove('infill-parsing-disabled');
+            this.set_cursor(this.#input.selectionStart);
             this.#update_markdown_render();
         } else {
             this.#wrapper.classList.add('infill-parsing-disabled');
@@ -495,6 +510,7 @@ export class Editor {
         if(is_shortcut && 'hqetbisumdlorp'.includes(key)) {
             e.preventDefault();
             e.stopPropagation();
+            return;
         }
 
         // ======= SELECTIONS =======
@@ -504,6 +520,8 @@ export class Editor {
             e.preventDefault();
             e.stopPropagation();
             this.#replace_selection(e.key);
+            this.#register_history_state();
+            return;
         }
 
         // Remove selection
@@ -511,6 +529,8 @@ export class Editor {
             e.preventDefault();
             e.stopPropagation();
             this.#replace_selection('');
+            this.#register_history_state();
+            return;
         }
 
         // Select all
@@ -519,6 +539,7 @@ export class Editor {
             this.#wrapper.contains(document.activeElement)
         ) {
             this.#select_all(e);
+            return;
         }
 
         // Select with shift
@@ -534,6 +555,22 @@ export class Editor {
         if(e.key === "ArrowDown" && !e.getModifierState('Shift')) this.#escape_selection_down(e);
 
         if(e.key == "Escape") this.#escape_selection(e);
+        
+        // ======= Undo / Redo history =======
+        if(e.key === "z" && e.getModifierState('Control') && !e.getModifierState('Alt')) this.#undo(e);
+        if(e.key === "y" && e.getModifierState('Control') && !e.getModifierState('Alt')) this.#redo(e);
+
+        if(e.key.length === 1 && !e.getModifierState('Control') && !e.getModifierState('Alt')) {
+            if(" -".includes(e.key)) {
+                window.setTimeout(() => this.#register_history_state(true, true), 10);
+            } else {
+                window.setTimeout(() => this.#register_history_state(true), 10);
+            }
+        }
+
+        if(e.key === "Delete" || e.key === "Backspace") {
+            this.#register_history_state();
+        }
 
     }
     
@@ -773,6 +810,7 @@ export class Editor {
     // -------------------------------
 
     #paste_selection(e: ClipboardEvent) {
+        window.setTimeout(() => this.#register_history_state(), 10);
         if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
             e.preventDefault();
@@ -791,6 +829,7 @@ export class Editor {
     // -------------------------------
 
     #cut_selection(e: ClipboardEvent) {
+        window.setTimeout(() => this.#register_history_state(), 10);
         if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
             e.preventDefault();
@@ -1217,5 +1256,70 @@ export class Editor {
         let default_file_name = `infill_export_${curr_date.getDate()}-${curr_date.getMonth() + 1}_${curr_date.getHours()}-${curr_date.getMinutes()}.md`;
 
         download_file(this.#input.value, default_file_name, 'text/plain');
+    }
+
+    // ==========================================================================================================================================
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    //                                                         UNDO / REDO HISTORY                                                                       
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // ==========================================================================================================================================
+
+    #register_history_state(is_character_change: boolean = false, force_new_state: boolean = false) {
+
+        const item: history_item = {
+            "input_value": this.#input.value,
+            "cursor_pos": this.#input.selectionStart,
+            "is_character_change": is_character_change 
+        }
+
+        // Character changes can replace the previous history state if that was a character change so check for that
+        if(is_character_change && !force_new_state && this.#history.undo_states[this.#history.undo_states.length - 1]?.is_character_change) {
+            this.#history.undo_states[this.#history.undo_states.length - 1] = item;
+
+        // Otherwise just create a new one
+        } else {
+            this.#history.undo_states.push(item);
+            if(this.#history.undo_states.length > 100) this.#history.undo_states.splice(0, 1);
+        }
+
+        this.#history.redo_states = [];
+
+        console.log(this.#history);
+    }
+
+    #undo(e: KeyboardEvent) {
+        if(!this.#toggle_check.checked) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        if(this.#history.undo_states.length < 2) return;
+
+        const states = this.#history.undo_states;
+        const prev_state = this.#history.undo_states.pop();
+
+        if(prev_state !== undefined) this.#history.redo_states.push(prev_state);
+
+        // Restore the last state
+        const new_state = states[states.length - 1];
+        if(new_state !== undefined) this.#input.value = new_state.input_value;
+        if(new_state !== undefined) this.set_cursor(new_state.cursor_pos);
+    }
+
+    #redo(e: KeyboardEvent) {
+        if(!this.#toggle_check.checked) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        if(this.#history.redo_states.length < 2) return;
+
+        const states = this.#history.redo_states;
+        const prev_state = this.#history.redo_states.pop();
+
+        if(prev_state !== undefined) this.#history.undo_states.push(prev_state);
+
+        // Revert the previous state
+        const new_state = states[states.length - 1];
+        if(new_state !== undefined) this.#input.value = new_state.input_value;
+        if(new_state !== undefined) this.set_cursor(new_state.cursor_pos);
     }
 }

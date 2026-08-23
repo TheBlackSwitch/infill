@@ -5203,6 +5203,10 @@ var Editor = class {
   #selection_mask;
   #slider;
   #toggle_check;
+  #history = {
+    "undo_states": [],
+    "redo_states": []
+  };
   #is_parsing = false;
   #parse_worker;
   // ==========================================================================================================================================
@@ -5320,6 +5324,7 @@ var Editor = class {
     this.#wrapper.appendChild(this.#bott_nav);
     this.#gen_btn(this.#bott_nav, () => this.#export_file(), '<i class="infill-icon infill-icon-export"></i>', "Export File");
     this.#gen_btn(this.#bott_nav, () => this.#import_file(), '<i class="infill-icon infill-icon-import"></i>', "Open File");
+    this.#register_history_state();
   }
   // -------------------------------
   //  Generate the html for a btn                            
@@ -5371,6 +5376,7 @@ var Editor = class {
     if (force_linebreak) this.#selection?.discard();
     this.#update_markdown_render();
     if (this.#selection !== null && this.#selection.visible) this.#selection.update_render();
+    this.#register_history_state();
   }
   // -------------------------------
   //  Slider                            
@@ -5390,6 +5396,7 @@ var Editor = class {
     const enabled = this.#toggle_check.checked;
     if (enabled) {
       this.#wrapper.classList.remove("infill-parsing-disabled");
+      this.set_cursor(this.#input.selectionStart);
       this.#update_markdown_render();
     } else {
       this.#wrapper.classList.add("infill-parsing-disabled");
@@ -5468,19 +5475,25 @@ var Editor = class {
     if (is_shortcut && "hqetbisumdlorp".includes(key)) {
       e.preventDefault();
       e.stopPropagation();
+      return;
     }
     if (e.key.length === 1 && !e.getModifierState("Control") && !e.getModifierState("Alt") && this.#selection !== null && this.#selection.visible) {
       e.preventDefault();
       e.stopPropagation();
       this.#replace_selection(e.key);
+      this.#register_history_state();
+      return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && this.#selection !== null && this.#selection.visible) {
       e.preventDefault();
       e.stopPropagation();
       this.#replace_selection("");
+      this.#register_history_state();
+      return;
     }
     if (e.key === "a" && e.getModifierState("Control") && !(e.getModifierState("Alt") || e.getModifierState("Shift")) && this.#wrapper.contains(document.activeElement)) {
       this.#select_all(e);
+      return;
     }
     if (e.key === "ArrowLeft" && e.getModifierState("Shift")) this.#select_left(e, e.getModifierState("Control"));
     if (e.key === "ArrowRight" && e.getModifierState("Shift")) this.#select_right(e, e.getModifierState("Control"));
@@ -5491,6 +5504,18 @@ var Editor = class {
     if (e.key === "ArrowUp" && !e.getModifierState("Shift")) this.#escape_selection_up(e);
     if (e.key === "ArrowDown" && !e.getModifierState("Shift")) this.#escape_selection_down(e);
     if (e.key == "Escape") this.#escape_selection(e);
+    if (e.key === "z" && e.getModifierState("Control") && !e.getModifierState("Alt")) this.#undo(e);
+    if (e.key === "y" && e.getModifierState("Control") && !e.getModifierState("Alt")) this.#redo(e);
+    if (e.key.length === 1 && !e.getModifierState("Control") && !e.getModifierState("Alt")) {
+      if (" -".includes(e.key)) {
+        window.setTimeout(() => this.#register_history_state(true, true), 10);
+      } else {
+        window.setTimeout(() => this.#register_history_state(true), 10);
+      }
+    }
+    if (e.key === "Delete" || e.key === "Backspace") {
+      this.#register_history_state();
+    }
   }
   #on_key_up(e) {
   }
@@ -5665,6 +5690,7 @@ var Editor = class {
   //  Paste                            
   // -------------------------------
   #paste_selection(e) {
+    window.setTimeout(() => this.#register_history_state(), 10);
     if (!this.#toggle_check.checked) return;
     if (this.#selection !== null && this.#selection.visible) {
       e.preventDefault();
@@ -5678,6 +5704,7 @@ var Editor = class {
   //  Cut                            
   // -------------------------------
   #cut_selection(e) {
+    window.setTimeout(() => this.#register_history_state(), 10);
     if (!this.#toggle_check.checked) return;
     if (this.#selection !== null && this.#selection.visible) {
       e.preventDefault();
@@ -5952,6 +5979,50 @@ var Editor = class {
     const curr_date = /* @__PURE__ */ new Date();
     let default_file_name = `infill_export_${curr_date.getDate()}-${curr_date.getMonth() + 1}_${curr_date.getHours()}-${curr_date.getMinutes()}.md`;
     download_file(this.#input.value, default_file_name, "text/plain");
+  }
+  // ==========================================================================================================================================
+  // ------------------------------------------------------------------------------------------------------------------------------------------
+  //                                                         UNDO / REDO HISTORY                                                                       
+  // ------------------------------------------------------------------------------------------------------------------------------------------
+  // ==========================================================================================================================================
+  #register_history_state(is_character_change = false, force_new_state = false) {
+    const item = {
+      "input_value": this.#input.value,
+      "cursor_pos": this.#input.selectionStart,
+      "is_character_change": is_character_change
+    };
+    if (is_character_change && !force_new_state && this.#history.undo_states[this.#history.undo_states.length - 1]?.is_character_change) {
+      this.#history.undo_states[this.#history.undo_states.length - 1] = item;
+    } else {
+      this.#history.undo_states.push(item);
+      if (this.#history.undo_states.length > 100) this.#history.undo_states.splice(0, 1);
+    }
+    this.#history.redo_states = [];
+    console.log(this.#history);
+  }
+  #undo(e) {
+    if (!this.#toggle_check.checked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.#history.undo_states.length < 2) return;
+    const states = this.#history.undo_states;
+    const prev_state = this.#history.undo_states.pop();
+    if (prev_state !== void 0) this.#history.redo_states.push(prev_state);
+    const new_state = states[states.length - 1];
+    if (new_state !== void 0) this.#input.value = new_state.input_value;
+    if (new_state !== void 0) this.set_cursor(new_state.cursor_pos);
+  }
+  #redo(e) {
+    if (!this.#toggle_check.checked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.#history.redo_states.length < 2) return;
+    const states = this.#history.redo_states;
+    const prev_state = this.#history.redo_states.pop();
+    if (prev_state !== void 0) this.#history.undo_states.push(prev_state);
+    const new_state = states[states.length - 1];
+    if (new_state !== void 0) this.#input.value = new_state.input_value;
+    if (new_state !== void 0) this.set_cursor(new_state.cursor_pos);
   }
 };
 export {
