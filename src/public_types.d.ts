@@ -27,3 +27,18 @@ export interface options {
 
     [key: string]: any;
 }
+
+
+// -------------------------------
+//  YAMP problems                            
+// -------------------------------
+
+export interface absolute_map {
+    html: string,
+    char_map: {
+        width_map: Array<Array<number>>,
+        absolute_map: Array<number>,
+        line_map: Array<Array<number>>,
+        line_idx_map: Array<number>
+    }
+}

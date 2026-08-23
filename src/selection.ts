@@ -56,16 +56,6 @@ export class EditorSelection {
         this.update_render();
     }
 
-    move_start(dist: number) {
-        this.#start += dist;
-        this.update_render();
-    }
-
-    move_end(dist: number) {
-        this.#end += dist;
-        this.update_render();
-    }
-
     // -------------------------------
     //  Getters                            
     // -------------------------------

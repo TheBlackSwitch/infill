@@ -1656,6 +1656,7 @@ var CharMap = class _CharMap {
   absolute_map() {
     let absolute_map = [];
     let line_map = [];
+    let line_idx_map = [];
     let offset = 0;
     for (let line_idx = 0; line_idx < this.width_map.length; line_idx++) {
       let curr_line = this.width_map[line_idx];
@@ -1665,6 +1666,7 @@ var CharMap = class _CharMap {
         let curr_width = curr_line[i];
         if (curr_width !== void 0 && curr_width >= 0 && curr_width < 255) {
           for (let ai = 0; ai <= curr_width; ai++) {
+            line_idx_map.push(line_idx);
             absolute_map.push(offset);
             curr_map.push(offset);
           }
@@ -1673,7 +1675,7 @@ var CharMap = class _CharMap {
       }
       line_map.push(curr_map);
     }
-    return { "absolute_map": absolute_map, "width_map": this.width_map, "line_map": line_map };
+    return { "absolute_map": absolute_map, "width_map": this.width_map, "line_map": line_map, "line_idx_map": line_idx_map };
   }
 };
 var IsTypeOf = class {
@@ -2694,7 +2696,9 @@ var CodeBlock = class _CodeBlock extends MultilineParser {
     let prev_node = ast[ast.length - 1];
     if (prev_node instanceof _CodeBlock && !prev_node.is_ended) {
       if (line.startsWith("```") && line.length === 4 && line.endsWith("\n")) {
-        CHAR_MAP.discard_immediately(char_map_line, charmap_idx, 3);
+        let offs = 0;
+        if (!options.add_zero_width_space_for_cursor_positions) offs = 1;
+        CHAR_MAP.discard_immediately(char_map_line, charmap_idx, line.length + offs);
         prev_node.extend("", true);
       } else {
         let text2 = "";
@@ -2756,6 +2760,7 @@ var CodeBlock = class _CodeBlock extends MultilineParser {
       out += line;
     }
     out += `</code></pre>`;
+    if (options.add_zero_width_space_for_cursor_positions) out += '<p style="font-size: 1px; margin: 0px">&ZeroWidthSpace;</p>';
     return out;
   }
 };
@@ -5054,14 +5059,6 @@ var EditorSelection = class {
     this.#end = position;
     this.update_render();
   }
-  move_start(dist) {
-    this.#start += dist;
-    this.update_render();
-  }
-  move_end(dist) {
-    this.#end += dist;
-    this.update_render();
-  }
   // -------------------------------
   //  Getters                            
   // -------------------------------
@@ -5389,7 +5386,8 @@ var Editor = class {
     "char_map": {
       "absolute_map": [],
       "width_map": [],
-      "line_map": []
+      "line_map": [],
+      "line_idx_map": []
     }
   };
   #update_markdown_render() {
@@ -5459,10 +5457,18 @@ var Editor = class {
       e.stopPropagation();
       this.#replace_selection("");
     }
-    if (e.key === "ArrowLeft") this.#select_left(e, e.getModifierState("Control"));
+    if (e.key === "a" && e.getModifierState("Control") && !(e.getModifierState("Alt") || e.getModifierState("Shift")) && this.#wrapper.contains(document.activeElement)) {
+      this.#select_all(e);
+    }
+    if (e.key === "ArrowLeft" && e.getModifierState("Shift")) this.#select_left(e, e.getModifierState("Control"));
     if (e.key === "ArrowRight" && e.getModifierState("Shift")) this.#select_right(e, e.getModifierState("Control"));
     if (e.key === "ArrowUp" && e.getModifierState("Shift")) this.#select_up(e);
     if (e.key === "ArrowDown" && e.getModifierState("Shift")) this.#select_down(e);
+    if (e.key === "ArrowLeft" && !e.getModifierState("Shift")) this.#escape_selection(e, this.#selection?.lo, true);
+    if (e.key === "ArrowRight" && !e.getModifierState("Shift")) this.#escape_selection(e, this.#selection?.hi, true);
+    if (e.key === "ArrowUp" && !e.getModifierState("Shift")) this.#escape_selection_up(e);
+    if (e.key === "ArrowDown" && !e.getModifierState("Shift")) this.#escape_selection_down(e);
+    if (e.key == "Escape") this.#escape_selection(e);
   }
   #on_key_up(e) {
   }
@@ -5477,7 +5483,6 @@ var Editor = class {
   #selection = null;
   #anchor_pos = [0, 0];
   #mouse_down = false;
-  #has_selection = false;
   // -------------------------------
   //  Mouse down                            
   // -------------------------------
@@ -5485,12 +5490,13 @@ var Editor = class {
     if (e.target === null || !(e.target instanceof Node)) return;
     if (this.#editor.contains(e.target)) {
       this.#mouse_down = true;
-      this.#has_selection = false;
       this.#anchor_pos = [e.clientX, e.clientY];
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       this.#selection?.discard();
       if (cursor === void 0) return this.#selection = null;
       this.#target_line_offs = null;
+      const mapped_pos = this.#map_cursor_pos(cursor);
+      if (mapped_pos !== void 0) this.#selection_anchor = mapped_pos;
       this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
     } else if (!this.#nav.contains(e.target)) {
       this.#selection?.discard();
@@ -5504,14 +5510,13 @@ var Editor = class {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) this.#selection?.set_end(cursor);
     }
-    if (this.#mouse_down && !this.#has_selection) {
+    if (this.#mouse_down && (this.#selection === null || !this.#selection.visible)) {
       let start_x = this.#anchor_pos[0];
       let start_y = this.#anchor_pos[1];
       if (start_x === void 0 || start_y === void 0) return;
       let dist = (start_x - e.clientX) ** 2 + (start_y - e.clientY) ** 2;
       if (dist >= 64) {
         this.#selection?.apply();
-        this.#has_selection = true;
         this.#target_line_offs = null;
       }
     }
@@ -5523,15 +5528,13 @@ var Editor = class {
     if (this.#mouse_down) {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) this.#selection?.set_end(cursor);
-      if (!this.#has_selection && !window.getSelection()?.toString()) {
-        if (cursor) {
-          const mapped_pos = this.#map_cursor_pos(cursor);
-          if (mapped_pos !== void 0) this.set_cursor(mapped_pos);
-        } else {
-          this.set_cursor(this.#input.value.length);
-        }
-        this.#update_markdown_render();
+      if (cursor) {
+        const mapped_pos = this.#map_cursor_pos(cursor);
+        if (mapped_pos !== void 0) this.set_cursor(mapped_pos);
+      } else {
+        this.set_cursor(this.#input.value.length);
       }
+      this.#update_markdown_render();
     }
     this.#mouse_down = false;
   }
@@ -5591,15 +5594,33 @@ var Editor = class {
     this.#selection.discard();
     return inside;
   }
-  // get the line idx corresponding to a character offset
+  // get the line idx corresponding to a character offset in html
   #get_line_idx(offs) {
-    let line_idx = 0;
-    for (let i = 0; i < offs; i++) {
-      if (this.#input.value.charAt(i) === "\n") {
-        line_idx++;
-      }
+    const result = this.#last_parse.char_map.line_idx_map[offs];
+    if (result === void 0) return -1;
+    return result;
+  }
+  // Create a new selection when there isn't one yet
+  #init_selection(cursor_md_pos, cursor_html_pos) {
+    if (this.#selection === null || !this.#selection.visible) {
+      this.#target_line_offs === null;
+      this.#selection_anchor = cursor_md_pos;
+      this.#input.blur();
+      let sel = new EditorSelection(this.#text_display, this.#selection_mask, cursor_html_pos, cursor_html_pos);
+      sel.apply();
+      return sel;
     }
-    return line_idx;
+    return this.#selection;
+  }
+  // Calculate the target offset when selecting up or down
+  #init_target_offs(selection_pos, curr_line_map) {
+    if (this.#target_line_offs === null) {
+      let line_start_idx_markdown = curr_line_map[0];
+      if (line_start_idx_markdown === void 0) line_start_idx_markdown = 0;
+      const line_start_idx = this.#inverse_map_cursor_pos(line_start_idx_markdown);
+      return selection_pos - line_start_idx;
+    }
+    return this.#target_line_offs;
   }
   // -------------------------------
   //  Copy                            
@@ -5639,50 +5660,78 @@ var Editor = class {
     }
   }
   // -------------------------------
+  //  Select All                            
+  // -------------------------------
+  #select_all(e) {
+    const abs_map = this.#last_parse.char_map.absolute_map;
+    if (this.#selection === null || !this.#selection.visible) {
+      this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, 0, abs_map.length - 1);
+      this.#selection.apply();
+    } else {
+      this.#selection.set_start(0);
+      this.#selection.set_end(abs_map.length - 1);
+    }
+    const targ_cursor_pos = abs_map[abs_map.length - 1];
+    if (targ_cursor_pos !== void 0) this.set_cursor(targ_cursor_pos);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  // -------------------------------
   //  Select with shift                            
   // -------------------------------
   // Main helper
-  #select(dist) {
-    const cursor = this.#inverse_map_cursor_pos(this.#input.selectionStart);
-    console.log(cursor);
-    if (cursor === void 0) return;
-    if (this.#selection === null || !this.#selection.visible) {
-      this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
-      this.#selection.apply();
-    }
-    const final_dist = Math.max(
-      Math.min(
-        dist,
-        this.#last_parse.char_map?.absolute_map.length - this.#selection.end - 2
-      ),
-      -this.#selection.end
-    );
-    console.log(dist, final_dist, this.#selection.end);
-    if (final_dist !== 0) this.#selection.move_end(final_dist);
-    if (this.#selection.length === 0) {
-      const sel = this.#map_cursor_pos(this.#selection.end);
-      if (sel !== void 0) this.set_cursor(sel);
-      this.#selection.discard();
-    } else if (this.#selection !== null) {
-      const sel = this.#map_cursor_pos(this.#selection.end);
-    }
+  #select_distance(dist) {
+    const cursor_md_pos = this.#input.selectionStart;
+    const cursor_html_pos = this.#inverse_map_cursor_pos(cursor_md_pos);
+    if (cursor_html_pos === void 0) return;
+    this.#selection = this.#init_selection(cursor_md_pos, cursor_html_pos);
+    let sel_end_md = this.#map_cursor_pos(this.#selection.end + dist);
+    const abs_char_map = this.#last_parse.char_map.absolute_map;
+    const max_len = abs_char_map[abs_char_map.length - 1];
+    if (max_len === void 0 || sel_end_md === void 0) return;
+    if (sel_end_md < 0) sel_end_md = 0;
+    if (sel_end_md > max_len) sel_end_md = max_len;
+    this.set_cursor(sel_end_md);
+    const sel_end = this.#inverse_map_cursor_pos(sel_end_md);
+    const sel_start = this.#inverse_map_cursor_pos(this.#selection_anchor);
+    this.#selection.set_end(sel_end);
+    this.#selection.set_start(sel_start);
   }
   #target_line_offs = 0;
+  #selection_anchor = 0;
   #select_left(e, ctrl) {
     if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
     console.log("SELECT");
     if (ctrl) {
-      const cursor_pos = this.#input.selectionStart;
-      const line_idx = this.#get_line_idx(cursor_pos);
-      const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
-      if (curr_line_map == void 0) return;
-      let end_line_offset = curr_line_map.indexOf(cursor_pos);
-      if (end_line_offset === -1) end_line_offset = curr_line_map.length;
-      this.#select(-end_line_offset - 1);
+      if (this.#selection !== null && this.#selection.visible && this.#selection.end > this.#selection.start) {
+        const start_line_idx = this.#get_line_idx(this.#selection.start);
+        const end_line_idx = this.#get_line_idx(this.#selection.end);
+        if (start_line_idx === end_line_idx || end_line_idx === start_line_idx + 1) {
+          this.#escape_selection(null, this.#selection.lo, true);
+          return;
+        }
+      }
+      const cursor_md_pos = this.#input.selectionStart;
+      const cursor_html_pos = this.#inverse_map_cursor_pos(cursor_md_pos);
+      this.#selection = this.#init_selection(cursor_md_pos, cursor_html_pos);
+      let line_idx = this.#get_line_idx(this.#selection.end);
+      let prev_line_map = this.#last_parse.char_map.line_map[line_idx - 1];
+      let targ_md_pos;
+      if (prev_line_map === void 0) {
+        targ_md_pos = this.#last_parse.char_map.absolute_map[0];
+      } else {
+        targ_md_pos = prev_line_map[prev_line_map.length - 1];
+      }
+      if (targ_md_pos === void 0) return;
+      this.set_cursor(targ_md_pos);
+      const targ_html_pos = this.#inverse_map_cursor_pos(targ_md_pos);
+      const targ_html_start_pos = this.#inverse_map_cursor_pos(this.#selection_anchor);
+      this.#selection.set_start(targ_html_start_pos);
+      this.#selection.set_end(targ_html_pos);
     } else {
-      this.#select(-1);
+      this.#select_distance(-1);
     }
     this.#target_line_offs = null;
   }
@@ -5690,83 +5739,154 @@ var Editor = class {
     if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    if (ctrl) {
-      const cursor_pos = this.#input.selectionStart;
-      const line_idx = this.#get_line_idx(cursor_pos);
-      const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
-      if (curr_line_map == void 0) return;
-      let end_line_offset = curr_line_map.indexOf(cursor_pos);
-      if (end_line_offset === -1) end_line_offset = curr_line_map.length;
-      this.#select(curr_line_map.length - end_line_offset);
-    } else {
-      this.#select(1);
-    }
     this.#target_line_offs = null;
+    if (ctrl) {
+      if (this.#selection !== null && this.#selection.visible && this.#selection.end < this.#selection.start) {
+        const start_line_idx = this.#get_line_idx(this.#selection.start);
+        const end_line_idx = this.#get_line_idx(this.#selection.end);
+        if (start_line_idx === end_line_idx || end_line_idx === start_line_idx - 1) {
+          this.#escape_selection(null, this.#selection.hi, true);
+          return;
+        }
+      }
+      const cursor_md_pos = this.#input.selectionStart;
+      const cursor_html_pos = this.#inverse_map_cursor_pos(cursor_md_pos);
+      this.#selection = this.#init_selection(cursor_md_pos, cursor_html_pos);
+      let line_idx = this.#get_line_idx(this.#selection.end);
+      let next_line_map = this.#last_parse.char_map.line_map[line_idx + 1];
+      let targ_md_pos;
+      if (next_line_map === void 0) {
+        const abs_map = this.#last_parse.char_map.absolute_map;
+        targ_md_pos = abs_map[abs_map.length - 1];
+      } else {
+        targ_md_pos = next_line_map[0];
+      }
+      if (targ_md_pos === void 0) return;
+      targ_md_pos--;
+      this.set_cursor(targ_md_pos);
+      const targ_html_pos = this.#inverse_map_cursor_pos(targ_md_pos);
+      const targ_html_start_pos = this.#inverse_map_cursor_pos(this.#selection_anchor);
+      this.#selection.set_start(targ_html_start_pos);
+      this.#selection.set_end(targ_html_pos);
+    } else {
+      this.#select_distance(1);
+    }
   }
   #select_up(e) {
     if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    this.#update_markdown_render();
-    const cursor_pos = this.#input.selectionStart;
-    let line_idx = this.#get_line_idx(cursor_pos);
-    if (this.#selection !== null && this.#selection.visible) {
-      const mapped_pos = this.#map_cursor_pos(this.#selection.end);
-      if (!mapped_pos) return;
-      line_idx = this.#get_line_idx(mapped_pos);
-    }
+    const cursor_md_pos = this.#input.selectionStart;
+    const cursor_html_pos = this.#inverse_map_cursor_pos(cursor_md_pos);
+    let line_idx = this.#get_line_idx(cursor_html_pos);
+    this.#selection = this.#init_selection(cursor_md_pos, cursor_html_pos);
+    const selection_pos = this.#selection.end;
     const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
-    const prev_line_map = this.#last_parse.char_map.line_map[line_idx - 1];
     if (curr_line_map === void 0) return;
-    const line_start_idx = curr_line_map[0];
-    let end_line_offset = this.#selection?.end;
-    if (end_line_offset === void 0 || !this.#selection?.visible) end_line_offset = this.#inverse_map_cursor_pos(cursor_pos);
-    if (line_start_idx !== void 0) end_line_offset -= this.#inverse_map_cursor_pos(line_start_idx);
-    if (end_line_offset === -1) end_line_offset = curr_line_map.length;
-    if (this.#target_line_offs === null) {
-      if (end_line_offset === void 0) return;
-      this.#target_line_offs = end_line_offset;
-    }
-    console.log("LINE OFFS", this.#target_line_offs, end_line_offset, line_start_idx);
-    console.log(prev_line_map);
-    if (prev_line_map === void 0) {
-      this.#select(-end_line_offset);
+    this.#target_line_offs = this.#init_target_offs(selection_pos, curr_line_map);
+    line_idx = this.#get_line_idx(this.#selection.end);
+    const prev_line = this.#last_parse.char_map.line_map[line_idx - 1];
+    if (prev_line === void 0) {
+      var target_md_char = curr_line_map[0];
     } else {
-      console.log(end_line_offset, Math.max(prev_line_map.length - this.#target_line_offs, 1));
-      const select_length = end_line_offset + Math.max(prev_line_map.length - this.#target_line_offs, 1);
-      this.#select(-select_length);
+      var target_md_char = prev_line[this.#target_line_offs];
+      if (target_md_char === void 0) target_md_char = prev_line[prev_line.length - 1];
+    }
+    if (target_md_char === void 0) return;
+    this.set_cursor(target_md_char);
+    const target_end_char = this.#inverse_map_cursor_pos(target_md_char);
+    const target_start_char = this.#inverse_map_cursor_pos(this.#selection_anchor);
+    this.#selection.set_end(target_end_char);
+    this.#selection.set_start(target_start_char);
+    if (this.#selection.length === 0) {
+      this.#selection.discard();
     }
   }
   #select_down(e) {
     if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    this.#update_markdown_render();
-    const cursor_pos = this.#input.selectionStart;
-    let line_idx = this.#get_line_idx(cursor_pos);
-    if (this.#selection !== null && this.#selection.visible) {
-      const mapped_pos = this.#map_cursor_pos(this.#selection.end);
-      if (!mapped_pos) return;
-      line_idx = this.#get_line_idx(mapped_pos);
+    const cursor_md_pos = this.#input.selectionStart;
+    const cursor_html_pos = this.#inverse_map_cursor_pos(cursor_md_pos);
+    let line_idx = this.#get_line_idx(cursor_html_pos);
+    this.#selection = this.#init_selection(cursor_md_pos, cursor_html_pos);
+    const selection_pos = this.#selection.end;
+    const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+    if (curr_line_map === void 0) return;
+    this.#target_line_offs = this.#init_target_offs(selection_pos, curr_line_map);
+    line_idx = this.#get_line_idx(this.#selection.end);
+    const next_line = this.#last_parse.char_map.line_map[line_idx + 1];
+    if (next_line === void 0) {
+      var target_md_char = curr_line_map[curr_line_map.length - 1];
+      if (target_md_char === void 0) return;
+    } else {
+      var target_md_char = next_line[this.#target_line_offs];
+      if (target_md_char === void 0) target_md_char = next_line[next_line.length - 1];
+      if (target_md_char === void 0) return;
+      target_md_char--;
     }
+    this.set_cursor(target_md_char);
+    const target_end_char = this.#inverse_map_cursor_pos(target_md_char);
+    const target_start_char = this.#inverse_map_cursor_pos(this.#selection_anchor);
+    this.#selection.set_end(target_end_char);
+    this.#selection.set_start(target_start_char);
+    if (this.#selection.length === 0) {
+      this.#selection.discard();
+    }
+  }
+  // -------------------------------
+  //  Escape selection                            
+  // -------------------------------
+  // Escape the selection whilst leaving the cursor position at the end of the selection
+  #escape_selection(e = null, cursor_pos = void 0, unit_html = true) {
+    if (this.#selection === null || !this.#selection.visible) return;
+    if (cursor_pos !== void 0) {
+      let target_pos;
+      if (unit_html) {
+        target_pos = this.#last_parse.char_map.absolute_map[cursor_pos];
+      } else {
+        target_pos = cursor_pos;
+      }
+      if (target_pos === void 0) return;
+      this.set_cursor(target_pos);
+    }
+    if (e !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    this.#target_line_offs = null;
+    this.#selection?.discard();
+  }
+  // Escape a selection on the left
+  #escape_selection_up(e) {
+    if (this.#selection === null || !this.#selection.visible) return;
+    e.preventDefault();
+    e.stopPropagation();
+    let line_idx = this.#get_line_idx(this.#selection.lo);
+    const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
+    const prev_line_map = this.#last_parse.char_map.line_map[line_idx - 1];
+    let targ_md_pos = this.#map_cursor_pos(this.#selection.lo);
+    if (curr_line_map !== void 0 && prev_line_map !== void 0) {
+      const target = this.#init_target_offs(this.#selection.lo, curr_line_map);
+      targ_md_pos = prev_line_map[target];
+    }
+    this.#escape_selection(null, targ_md_pos, false);
+  }
+  // Escape a selection on the left
+  #escape_selection_down(e) {
+    if (this.#selection === null || !this.#selection.visible) return;
+    e.preventDefault();
+    e.stopPropagation();
+    let line_idx = this.#get_line_idx(this.#selection.hi);
     const curr_line_map = this.#last_parse.char_map.line_map[line_idx];
     const next_line_map = this.#last_parse.char_map.line_map[line_idx + 1];
-    if (curr_line_map === void 0) return;
-    const line_start_idx = curr_line_map[0];
-    let end_line_offset = this.#selection?.end;
-    if (end_line_offset === void 0 || !this.#selection?.visible) end_line_offset = this.#inverse_map_cursor_pos(cursor_pos);
-    if (line_start_idx !== void 0) end_line_offset -= this.#inverse_map_cursor_pos(line_start_idx);
-    if (this.#target_line_offs === null) {
-      if (end_line_offset === void 0) return;
-      this.#target_line_offs = end_line_offset;
+    let targ_md_pos = this.#map_cursor_pos(this.#selection.hi);
+    if (curr_line_map !== void 0 && next_line_map !== void 0) {
+      const target = this.#init_target_offs(this.#selection.hi, curr_line_map);
+      targ_md_pos = next_line_map[target];
     }
-    console.log("LINE OFFS", this.#target_line_offs, end_line_offset);
-    if (next_line_map === void 0) {
-      this.#select(curr_line_map.length - end_line_offset);
-    } else {
-      const select_length = curr_line_map.length - end_line_offset + Math.min(this.#target_line_offs, next_line_map.length) - 1;
-      this.#select(select_length);
-    }
+    if (targ_md_pos !== void 0) targ_md_pos--;
+    this.#escape_selection(null, targ_md_pos, false);
   }
 };
 export {
