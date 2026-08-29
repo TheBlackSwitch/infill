@@ -122,3 +122,19 @@ export function cursor_pos_from_point(root_element: HTMLElement, x: number, y: n
         "local": local_offset
     };
 }
+
+// Check if this is a touch only device
+export function touch_only(): boolean {
+    return !matchMedia("(pointer: fine)").matches;
+}
+
+export function log_string(value: any) {
+    const div = document.createElement('div');
+    try {
+        div.textContent = JSON.stringify(value);
+    } catch {
+        div.textContent = value;
+    }
+    const logs = document.getElementById('logs');
+    logs?.prepend(div);
+}

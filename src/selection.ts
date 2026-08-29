@@ -18,14 +18,18 @@ export class EditorSelection {
     #parent_element: HTMLElement;
     #selection_mask: HTMLElement;
     #visible: boolean = false;
+    #mobile_mode: boolean = false;
+    #on_thumb_down: Function;
     
     #elems: Array<HTMLDivElement> = [];
 
-    constructor(parent: HTMLElement, selection_mask: HTMLElement, start: number, end: number) {
+    constructor(parent: HTMLElement, selection_mask: HTMLElement, start: number, end: number, mobile_mode: boolean = false, on_thumb_down: Function = () => {}) {
         this.#start = start;
         this.#end = end;
         this.#parent_element = parent;
         this.#selection_mask = selection_mask;
+        this.#mobile_mode = mobile_mode;
+        this.#on_thumb_down = on_thumb_down;
     }
 
     // -------------------------------
@@ -85,6 +89,10 @@ export class EditorSelection {
         return Math.abs(this.#start - this.#end);
     }
 
+    get is_mobile() {
+        return this.#mobile_mode;
+    }
+
     // -------------------------------
     //  Rendering                            
     // -------------------------------
@@ -108,8 +116,11 @@ export class EditorSelection {
 
             const parent_rect = this.#parent_element.getBoundingClientRect();
 
-            for(const rect of range.getClientRects()) {
+            const rects = range.getClientRects();
+
+            for(const rect of rects) {
                 const elem = document.createElement('div');
+                elem.classList.add('infill-selection');
 
                 // Calc the offset within the parent
                 elem.style.left = `${rect.left - parent_rect.left}px`;
@@ -121,6 +132,35 @@ export class EditorSelection {
                 this.#selection_mask.appendChild(elem);
 
                 this.#elems.push(elem);
+            }
+
+            if(this.#mobile_mode && rects.length > 0) {
+                const start = rects[0];
+                const end = rects[rects.length - 1];
+
+                if(end === undefined || start === undefined) return;
+
+                const select_start_thumb = document.createElement('div');
+                select_start_thumb.classList.add('infill-editor-select-thumb', 'infill-start');
+                select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 1.5}px`;
+                select_start_thumb.style.top = `${start.top - parent_rect.top - 10}px`;
+                select_start_thumb.style.height = `${start.height * 1.5}px`;
+                select_start_thumb.style.width = `${start.height * 1.5}px`;
+                select_start_thumb.addEventListener('pointerdown', (e) => this.#on_thumb_down(e, "start"));
+
+
+                const select_end_thumb = document.createElement('div');
+                select_end_thumb.classList.add('infill-editor-select-thumb', 'infill-end');
+                select_end_thumb.style.left = `${end.right - parent_rect.left - 20}px`;
+                select_end_thumb.style.top = `${end.top - parent_rect.top - 10}px`;
+                select_end_thumb.style.height = `${end.height * 1.5}px`;
+                select_end_thumb.style.width = `${end.height * 1.5}px`;
+                select_end_thumb.addEventListener('pointerdown', (e) => this.#on_thumb_down(e, "end"));
+
+                this.#selection_mask.appendChild(select_start_thumb);
+                this.#selection_mask.appendChild(select_end_thumb);
+                this.#elems.push(select_start_thumb);
+                this.#elems.push(select_end_thumb);
             }
         }
     }

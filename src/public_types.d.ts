@@ -20,7 +20,9 @@ export interface options {
         image?: boolean,
         coloured?: boolean,
         toggle_markdown_parsing?: boolean,
-        zoom?: boolean        
+        zoom?: boolean,
+        export?: boolean,
+        import?: boolean  
     },
     enabled_features?: parsers,
     keyboard_shortcuts_enabled?: boolean,
