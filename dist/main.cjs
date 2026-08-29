@@ -5425,7 +5425,7 @@ var Editor = class {
     this.#toggle_check.setAttribute("type", "checkbox");
     this.#toggle_check.setAttribute("checked", "");
     this.#toggle_check.classList.add("infill-toggle-check");
-    this.#toggle_check.addEventListener("click", () => this.#click_toggle());
+    this.#toggle_check.addEventListener("click", () => window.setTimeout(() => this.#click_toggle(), 100));
     this.#toggle_check.addEventListener("pointerdown", () => this.#register_focus());
     toggle_wrapper.appendChild(this.#toggle_check);
     let toggle_gutter = document.createElement("div");
