@@ -18,6 +18,7 @@ import './prismjs_highlight/mcfunction';
 import DOMPurify from 'dompurify'
 import { cursor_pos_from_point, download_file, log_string, touch_only } from './utils';
 import { EditorSelection } from './selection';
+import Prism from 'prismjs';
 
 interface history_item {
     input_value: string,
@@ -77,6 +78,7 @@ export const default_options: options = {
 export class Editor {
     #parent_element: HTMLElement;
     #options: options;
+    #place_holder: string;
 
     #wrapper: HTMLElement;
     #nav: HTMLElement;
@@ -101,9 +103,10 @@ export class Editor {
     // ------------------------------------------------------------------------------------------------------------------------------------------
     // ==========================================================================================================================================
 
-    constructor(parent_element: HTMLElement, width: string = "100%", height: string = "40vh", options: options = {}) {
+    constructor(parent_element: HTMLElement, options: options = {}, width: string = "100%", height: string = "40vh", placeholder = "Enter text here, you can use markdown formatting.") {
         if(!parent_element) throw Error('[Infill]: Failed to instantiate new editor. No parent element provided!');
         this.#parent_element = parent_element;
+        this.#place_holder = placeholder;
 
         this.#options = {};
         for(const [option, value] of Object.entries(default_options)) {
@@ -257,6 +260,7 @@ export class Editor {
         this.#toggle_check.setAttribute('checked', '');
         this.#toggle_check.classList.add('infill-toggle-check');
         this.#toggle_check.addEventListener('click', () => this.#click_toggle());
+        this.#toggle_check.addEventListener('pointerdown', () => this.#register_focus());
         toggle_wrapper.appendChild(this.#toggle_check);
 
         let toggle_gutter = document.createElement('div');
@@ -277,6 +281,7 @@ export class Editor {
         this.#input.setAttribute('name', 'infill-editor-input');
         this.#input.addEventListener("beforeinput", (e) => this.#before_input(e));
         this.#input.addEventListener("input", () => this.#update_markdown_render());
+        this.#input.addEventListener('blur', () => this.#update_markdown_render());
         this.#editor.appendChild(this.#input);
 
         this.#text_display = document.createElement('div');
@@ -340,6 +345,8 @@ export class Editor {
         this.#gen_btn(this.#bott_nav_right, () => this.#import_file(), '<i class="infill-icon infill-icon-import"></i>', 'Open File');
 
         this.#register_history_state();
+
+        this.#update_markdown_render();
     }
 
     // -------------------------------
@@ -424,8 +431,6 @@ export class Editor {
     // -------------------------------
 
     #slider_change() {
-
-        console.log("SLIDE")
         let scale = 1.0;
 
         const slider_value = Number(this.#slider.value);
@@ -435,21 +440,33 @@ export class Editor {
 
         this.#text_display.style.fontSize = `${scale * 16}px`;
         this.#input.style.fontSize = `${scale * 16}px`;
+
+        this.#selection?.update_render();
     }
 
     // -------------------------------
     //  Toggle button                            
     // -------------------------------
 
+    #editor_had_focus: boolean = false;
+
+    // Register if the editor is focused just before it will lose focus due to clicking on the toggle
+    #register_focus() {
+        this.#editor_had_focus = document.activeElement === this.#input;
+    }
+
     #click_toggle() {
         const enabled = this.#toggle_check.checked;
 
+        console.log('CHECK');
+
         if(enabled) {
             this.#wrapper.classList.remove('infill-parsing-disabled');
-            this.set_cursor(this.#input.selectionStart, document.activeElement !== this.#input);
+            window.setTimeout(() => this.set_cursor(this.#input.selectionStart, !this.#editor_had_focus), 10);
             this.#update_markdown_render();
         } else {
             this.#wrapper.classList.add('infill-parsing-disabled');
+            if(this.#editor_had_focus) this.#input.focus();
         }
     }
 
@@ -478,6 +495,10 @@ export class Editor {
 
         if(! this.#toggle_check.checked) return;
 
+        if(markdown_input.length === 0 && document.activeElement !== this.#input) {
+            markdown_input = `<span class="infill-placeholder">${this.#place_holder}</span>`;
+        }
+
         // Insert a cursor
         const cursor_pos = this.#input.selectionStart;
         markdown_input = markdown_input.slice(0, cursor_pos) + '\uE003' + markdown_input.slice(cursor_pos);
@@ -496,34 +517,21 @@ export class Editor {
         let text = DOMPurify.sanitize(this.#last_parse.html);
 
         console.log(this.#last_parse.html);
+        
+        this.#text_display.innerHTML = text;
+
+        Prism.highlightAllUnder(this.#wrapper);
 
         // Replace the cursor character with an actual element
-        this.#text_display.innerHTML = text.replaceAll('\uE003','<i class="infill-editor-cursor"></i>');
+        this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll('\uE003','<i class="infill-editor-cursor"></i>');
 
-        /* 
+        document.getElementsByClassName('infill-editor-cursor')[0]?.scrollIntoView({
+            "behavior": "instant",
+            "block": "nearest",
+            "inline": "center"
+        });
 
-        this.#parse_worker.postMessage(markdown_input);
-
-        this.#parse_worker.onmessage = (e) => {
-            this.#last_parse = e.data;
-
-            // Please say this never happens
-            if(this.#last_parse.html === undefined) throw Error("[Infill]: whoops something went horribly wrong whilst parsing markdown. Please make an issue on github immediately.");
-
-            console.log(this.#last_parse.html);
-
-            // Sanatize html
-            let text = this.#last_parse.html
-            //let text = DOMPurify.sanitize(this.#last_parse.html);
-
-            console.log(this.#last_parse.html);
-
-            // Replace the cursor character with an actual element
-            this.#text_display.innerHTML = text.replaceAll('\uE003','<i class="infill-editor-cursor"></i>');
-            this.#is_parsing = false;
-        }
-
-        */
+        
     }
 
     // ==========================================================================================================================================
@@ -682,6 +690,8 @@ export class Editor {
     #mouse_down: boolean = false;
     #mouse_hold: boolean = false;
     #hold_timeout: number | null = null;
+    #last_click: number = 0;
+    #last_click_pos: number | undefined = 0;
 
     // -------------------------------
     //  Mouse down                            
@@ -691,16 +701,27 @@ export class Editor {
         if(e.target === null || !(e.target instanceof Node)) return;
         if(!this.#toggle_check.checked) return;
 
+        const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+
+        // Detect double clicking
+        if(this.#last_click + 300 > Date.now() && this.#last_click_pos !== undefined && cursor === this.#last_click_pos) {
+            if(e.pointerType === "mouse") this.#select_word();
+            this.#last_click = Date.now();
+            return;
+        }
+        this.#last_click = Date.now();
+        this.#last_click_pos = cursor;
+
         this.#mouse_hold = false;
 
+        // Ignore clicking on any of the selection thumbs (for mobile only)
         if(this.#selection_mask.contains(e.target)) {
             return;
-
+        
+        // Click on the editor
         } else if(this.#editor.contains(e.target)) {
             this.#mouse_down = true;
             this.#anchor_pos = [e.clientX, e.clientY];
-
-            const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
 
             // discard the old selection
             this.#selection?.discard();
@@ -714,6 +735,7 @@ export class Editor {
             this.#selection_anchor = mapped_pos;
             this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
 
+            // Detect holding pointer down (for mobile only)
             if(e.pointerType !== "mouse") this.#hold_timeout = window.setTimeout(() => {
                 if(!this.#mouse_down) return;
                 this.#mouse_hold = true;
@@ -721,7 +743,7 @@ export class Editor {
                 e.preventDefault();
             }, 800);
 
-
+        // Discard the selection when we click on anything other than the nav (and editor)
         } else if(!this.#nav.contains(e.target) && !this.#bott_nav.contains(e.target)) {
             this.#selection?.discard();
         }
@@ -741,7 +763,7 @@ export class Editor {
         if(!this.#toggle_check.checked) return;
 
         // Update the selection
-        if(this.#mouse_down && e.pointerType === "mouse") {
+        if(this.#mouse_down && e.pointerType === "mouse" && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) {
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
             if(cursor !== undefined) this.#selection?.set_end(cursor);
         }
@@ -755,7 +777,7 @@ export class Editor {
 
             let dist = (start_x - e.clientX)**2 + (start_y - e.clientY)**2;
             if(dist >= 64) {
-                if(e.pointerType === "mouse") {
+                if(e.pointerType === "mouse" && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) {
                     this.#selection?.apply();
                     this.#target_line_offs = null;
                 }
@@ -790,7 +812,7 @@ export class Editor {
 
         if(this.#mouse_down) {
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-            if(cursor !== undefined) this.#selection?.set_end(cursor);
+            if(cursor !== undefined && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) this.#selection?.set_end(cursor);
 
             // Always move the position
             if(cursor !== undefined) {
@@ -997,8 +1019,6 @@ export class Editor {
     // -------------------------------
     //  Copy                            
     // -------------------------------
-
-
 
     #copy_selection(e: ClipboardEvent | Clipboard) {
         if(!this.#toggle_check.checked) return;
@@ -1358,6 +1378,39 @@ export class Editor {
         if(this.#selection.length === 0) {
             this.#selection.discard();
         }
+    }
+
+    // -------------------------------
+    //  Select word                            
+    // -------------------------------
+
+    #select_word() {
+        if(this.#selection !== null && this.#selection?.visible) return;
+
+        const word_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const cursor = this.#input.selectionStart;
+
+
+        let start = cursor;
+        while(word_chars.includes(this.#input.value.charAt(start - 1)) && start > 0) {
+            start--;
+        }
+
+        let end = cursor;
+        while(word_chars.includes(this.#input.value.charAt(end)) && end < this.#input.value.length) {
+            end++;
+        }
+
+        const mapped_start = this.#inverse_map_cursor_pos(start);
+        const mapped_end = this.#inverse_map_cursor_pos(end);
+
+        this.#selection?.discard();
+        this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, mapped_start, mapped_end);
+
+        this.#selection_anchor = Math.min(start, end);
+        this.set_cursor(Math.max(start, end));
+
+        this.#selection.apply();
     }
 
     // -------------------------------

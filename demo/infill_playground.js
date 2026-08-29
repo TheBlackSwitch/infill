@@ -4,7 +4,7 @@ import * as Infill from "./infill/main.js"
 // Awesome right?
 
 let editor_parent = document.getElementById('editor-wrapper');
-let editor = new Infill.Editor(editor_parent, "100%", "60vh", {
+let editor = new Infill.Editor(editor_parent, {
     "nav": {
         "header": true
     }

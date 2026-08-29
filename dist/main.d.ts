@@ -39,7 +39,7 @@ interface options {
 declare const default_options: options;
 declare class Editor {
     #private;
-    constructor(parent_element: HTMLElement, width?: string, height?: string, options?: options);
+    constructor(parent_element: HTMLElement, options?: options, width?: string, height?: string, placeholder?: string);
     set_cursor(position: number, no_focus?: boolean, no_update?: boolean): void;
     get markdown(): string;
     get html(): string;

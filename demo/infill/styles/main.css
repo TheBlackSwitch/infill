@@ -7,6 +7,7 @@
 @layer infill-default-theme {
     :root {
         --infill-text-color: #aaa;                                      /* The default text color */
+        --infill-placeholder-text-color: #666;                          /* The text color of the placeholder */
 
         --infill-tooltip-color: #212121;                                /* The background color of the button's tooltip */
         --infill-tooltip-border: 1px solid #454545;                     /* The border of the button's tooltip */
@@ -174,6 +175,10 @@
 
 .infill-editor-sizer {
     grid-area: sizer;
+}
+
+.infill-placeholder {
+    color: var(--infill-placeholder-text-color);
 }
 
 .infill-editor-nav-button-wrapper {
@@ -542,6 +547,7 @@
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--infill-editor-scrollbar-thumb-color) var(--infill-editor-scrollbar-background-color);
+    scroll-padding: 25%;
 }
 
 /* ============================== //
@@ -564,6 +570,8 @@
     outline: none;
     font: inherit;
     user-select: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--infill-editor-scrollbar-thumb-color) var(--infill-editor-scrollbar-background-color);
 }
 
 /* ============================== //

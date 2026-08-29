@@ -35,7 +35,7 @@ var require_prism = __commonJS({
   "node_modules/prismjs/prism.js"(exports2, module2) {
     "use strict";
     var _self = typeof window !== "undefined" ? window : typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope ? self : {};
-    var Prism2 = (function(_self2) {
+    var Prism3 = (function(_self2) {
       var lang = /(?:^|\s)lang(?:uage)?-([\w-]+)(?=\s|$)/i;
       var uniqueId = 0;
       var plainTextGrammar = {};
@@ -922,12 +922,12 @@ var require_prism = __commonJS({
       return _;
     })(_self);
     if (typeof module2 !== "undefined" && module2.exports) {
-      module2.exports = Prism2;
+      module2.exports = Prism3;
     }
     if (typeof global !== "undefined") {
-      global.Prism = Prism2;
+      global.Prism = Prism3;
     }
-    Prism2.languages.markup = {
+    Prism3.languages.markup = {
       "comment": {
         pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
         greedy: true
@@ -1005,14 +1005,14 @@ var require_prism = __commonJS({
         /&#x?[\da-f]{1,8};/i
       ]
     };
-    Prism2.languages.markup["tag"].inside["attr-value"].inside["entity"] = Prism2.languages.markup["entity"];
-    Prism2.languages.markup["doctype"].inside["internal-subset"].inside = Prism2.languages.markup;
-    Prism2.hooks.add("wrap", function(env) {
+    Prism3.languages.markup["tag"].inside["attr-value"].inside["entity"] = Prism3.languages.markup["entity"];
+    Prism3.languages.markup["doctype"].inside["internal-subset"].inside = Prism3.languages.markup;
+    Prism3.hooks.add("wrap", function(env) {
       if (env.type === "entity") {
         env.attributes["title"] = env.content.replace(/&amp;/, "&");
       }
     });
-    Object.defineProperty(Prism2.languages.markup.tag, "addInlined", {
+    Object.defineProperty(Prism3.languages.markup.tag, "addInlined", {
       /**
        * Adds an inlined language to markup.
        *
@@ -1029,7 +1029,7 @@ var require_prism = __commonJS({
         includedCdataInside["language-" + lang] = {
           pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
           lookbehind: true,
-          inside: Prism2.languages[lang]
+          inside: Prism3.languages[lang]
         };
         includedCdataInside["cdata"] = /^<!\[CDATA\[|\]\]>$/i;
         var inside = {
@@ -1040,7 +1040,7 @@ var require_prism = __commonJS({
         };
         inside["language-" + lang] = {
           pattern: /[\s\S]+/,
-          inside: Prism2.languages[lang]
+          inside: Prism3.languages[lang]
         };
         var def = {};
         def[tagName] = {
@@ -1051,10 +1051,10 @@ var require_prism = __commonJS({
           greedy: true,
           inside
         };
-        Prism2.languages.insertBefore("markup", "cdata", def);
+        Prism3.languages.insertBefore("markup", "cdata", def);
       }
     });
-    Object.defineProperty(Prism2.languages.markup.tag, "addAttribute", {
+    Object.defineProperty(Prism3.languages.markup.tag, "addAttribute", {
       /**
        * Adds an pattern to highlight languages embedded in HTML attributes.
        *
@@ -1067,7 +1067,7 @@ var require_prism = __commonJS({
        * addAttribute('style', 'css');
        */
       value: function(attrName, lang) {
-        Prism2.languages.markup.tag.inside["special-attr"].push({
+        Prism3.languages.markup.tag.inside["special-attr"].push({
           pattern: RegExp(
             /(^|["'\s])/.source + "(?:" + attrName + ")" + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
             "i"
@@ -1082,7 +1082,7 @@ var require_prism = __commonJS({
                   pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
                   lookbehind: true,
                   alias: [lang, "language-" + lang],
-                  inside: Prism2.languages[lang]
+                  inside: Prism3.languages[lang]
                 },
                 "punctuation": [
                   {
@@ -1097,16 +1097,16 @@ var require_prism = __commonJS({
         });
       }
     });
-    Prism2.languages.html = Prism2.languages.markup;
-    Prism2.languages.mathml = Prism2.languages.markup;
-    Prism2.languages.svg = Prism2.languages.markup;
-    Prism2.languages.xml = Prism2.languages.extend("markup", {});
-    Prism2.languages.ssml = Prism2.languages.xml;
-    Prism2.languages.atom = Prism2.languages.xml;
-    Prism2.languages.rss = Prism2.languages.xml;
-    (function(Prism3) {
+    Prism3.languages.html = Prism3.languages.markup;
+    Prism3.languages.mathml = Prism3.languages.markup;
+    Prism3.languages.svg = Prism3.languages.markup;
+    Prism3.languages.xml = Prism3.languages.extend("markup", {});
+    Prism3.languages.ssml = Prism3.languages.xml;
+    Prism3.languages.atom = Prism3.languages.xml;
+    Prism3.languages.rss = Prism3.languages.xml;
+    (function(Prism4) {
       var string = /(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;
-      Prism3.languages.css = {
+      Prism4.languages.css = {
         "comment": /\/\*[\s\S]*?\*\//,
         "atrule": {
           pattern: RegExp("@[\\w-](?:" + /[^;{\s"']|\s+(?!\s)/.source + "|" + string.source + ")*?" + /(?:;|(?=\s*\{))/.source),
@@ -1156,14 +1156,14 @@ var require_prism = __commonJS({
         },
         "punctuation": /[(){};:,]/
       };
-      Prism3.languages.css["atrule"].inside.rest = Prism3.languages.css;
-      var markup = Prism3.languages.markup;
+      Prism4.languages.css["atrule"].inside.rest = Prism4.languages.css;
+      var markup = Prism4.languages.markup;
       if (markup) {
         markup.tag.addInlined("style", "css");
         markup.tag.addAttribute("style", "css");
       }
-    })(Prism2);
-    Prism2.languages.clike = {
+    })(Prism3);
+    Prism3.languages.clike = {
       "comment": [
         {
           pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
@@ -1194,9 +1194,9 @@ var require_prism = __commonJS({
       "operator": /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
       "punctuation": /[{}[\];(),.:]/
     };
-    Prism2.languages.javascript = Prism2.languages.extend("clike", {
+    Prism3.languages.javascript = Prism3.languages.extend("clike", {
       "class-name": [
-        Prism2.languages.clike["class-name"],
+        Prism3.languages.clike["class-name"],
         {
           pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$A-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\.(?:constructor|prototype))/,
           lookbehind: true
@@ -1228,8 +1228,8 @@ var require_prism = __commonJS({
       },
       "operator": /--|\+\+|\*\*=?|=>|&&=?|\|\|=?|[!=]==|<<=?|>>>?=?|[-+*/%&|^!=<>]=?|\.{3}|\?\?=?|\?\.?|[~:]/
     });
-    Prism2.languages.javascript["class-name"][0].pattern = /(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/;
-    Prism2.languages.insertBefore("javascript", "keyword", {
+    Prism3.languages.javascript["class-name"][0].pattern = /(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/;
+    Prism3.languages.insertBefore("javascript", "keyword", {
       "regex": {
         pattern: RegExp(
           // lookbehind
@@ -1249,7 +1249,7 @@ var require_prism = __commonJS({
             pattern: /^(\/)[\s\S]+(?=\/[a-z]*$)/,
             lookbehind: true,
             alias: "language-regex",
-            inside: Prism2.languages.regex
+            inside: Prism3.languages.regex
           },
           "regex-delimiter": /^\/|\/$/,
           "regex-flags": /^[a-z]+$/
@@ -1264,27 +1264,27 @@ var require_prism = __commonJS({
         {
           pattern: /(function(?:\s+(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)?\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\))/,
           lookbehind: true,
-          inside: Prism2.languages.javascript
+          inside: Prism3.languages.javascript
         },
         {
           pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$a-z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*=>)/i,
           lookbehind: true,
-          inside: Prism2.languages.javascript
+          inside: Prism3.languages.javascript
         },
         {
           pattern: /(\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*=>)/,
           lookbehind: true,
-          inside: Prism2.languages.javascript
+          inside: Prism3.languages.javascript
         },
         {
           pattern: /((?:\b|\s|^)(?!(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)(?![$\w\xA0-\uFFFF]))(?:(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*)\(\s*|\]\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*\{)/,
           lookbehind: true,
-          inside: Prism2.languages.javascript
+          inside: Prism3.languages.javascript
         }
       ],
       "constant": /\b[A-Z](?:[A-Z_]|\dx?)*\b/
     });
-    Prism2.languages.insertBefore("javascript", "string", {
+    Prism3.languages.insertBefore("javascript", "string", {
       "hashbang": {
         pattern: /^#!.*/,
         greedy: true,
@@ -1306,7 +1306,7 @@ var require_prism = __commonJS({
                 pattern: /^\$\{|\}$/,
                 alias: "punctuation"
               },
-              rest: Prism2.languages.javascript
+              rest: Prism3.languages.javascript
             }
           },
           "string": /[\s\S]+/
@@ -1319,23 +1319,23 @@ var require_prism = __commonJS({
         alias: "property"
       }
     });
-    Prism2.languages.insertBefore("javascript", "operator", {
+    Prism3.languages.insertBefore("javascript", "operator", {
       "literal-property": {
         pattern: /((?:^|[,{])[ \t]*)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*:)/m,
         lookbehind: true,
         alias: "property"
       }
     });
-    if (Prism2.languages.markup) {
-      Prism2.languages.markup.tag.addInlined("script", "javascript");
-      Prism2.languages.markup.tag.addAttribute(
+    if (Prism3.languages.markup) {
+      Prism3.languages.markup.tag.addInlined("script", "javascript");
+      Prism3.languages.markup.tag.addAttribute(
         /on(?:abort|blur|change|click|composition(?:end|start|update)|dblclick|error|focus(?:in|out)?|key(?:down|up)|load|mouse(?:down|enter|leave|move|out|over|up)|reset|resize|scroll|select|slotchange|submit|unload|wheel)/.source,
         "javascript"
       );
     }
-    Prism2.languages.js = Prism2.languages.javascript;
+    Prism3.languages.js = Prism3.languages.javascript;
     (function() {
-      if (typeof Prism2 === "undefined" || typeof document === "undefined") {
+      if (typeof Prism3 === "undefined" || typeof document === "undefined") {
         return;
       }
       if (!Element.prototype.matches) {
@@ -1396,10 +1396,10 @@ var require_prism = __commonJS({
         }
         return void 0;
       }
-      Prism2.hooks.add("before-highlightall", function(env) {
+      Prism3.hooks.add("before-highlightall", function(env) {
         env.selector += ", " + SELECTOR;
       });
-      Prism2.hooks.add("before-sanity-check", function(env) {
+      Prism3.hooks.add("before-sanity-check", function(env) {
         var pre = (
           /** @type {HTMLPreElement} */
           env.element
@@ -1415,9 +1415,9 @@ var require_prism = __commonJS({
             var extension = (/\.(\w+)$/.exec(src) || [, "none"])[1];
             language = EXTENSIONS[extension] || extension;
           }
-          Prism2.util.setLanguage(code, language);
-          Prism2.util.setLanguage(pre, language);
-          var autoloader = Prism2.plugins.autoloader;
+          Prism3.util.setLanguage(code, language);
+          Prism3.util.setLanguage(pre, language);
+          var autoloader = Prism3.plugins.autoloader;
           if (autoloader) {
             autoloader.loadLanguages(language);
           }
@@ -1444,7 +1444,7 @@ var require_prism = __commonJS({
                 }
               }
               code.textContent = text2;
-              Prism2.highlightElement(code);
+              Prism3.highlightElement(code);
             },
             function(error) {
               pre.setAttribute(STATUS_ATTR, STATUS_FAILED);
@@ -1453,7 +1453,7 @@ var require_prism = __commonJS({
           );
         }
       });
-      Prism2.plugins.fileHighlight = {
+      Prism3.plugins.fileHighlight = {
         /**
          * Executes the File Highlight plugin for all matching `pre` elements under the given container.
          *
@@ -1464,17 +1464,17 @@ var require_prism = __commonJS({
         highlight: function highlight(container) {
           var elements = (container || document).querySelectorAll(SELECTOR);
           for (var i = 0, element; element = elements[i++]; ) {
-            Prism2.highlightElement(element);
+            Prism3.highlightElement(element);
           }
         }
       };
       var logged = false;
-      Prism2.fileHighlight = function() {
+      Prism3.fileHighlight = function() {
         if (!logged) {
           console.warn("Prism.fileHighlight is deprecated. Use `Prism.plugins.fileHighlight.highlight` instead.");
           logged = true;
         }
-        Prism2.plugins.fileHighlight.highlight.apply(this, arguments);
+        Prism3.plugins.fileHighlight.highlight.apply(this, arguments);
       };
     })();
   }
@@ -3449,12 +3449,15 @@ function verify_options(options) {
 var import_prismjs = __toESM(require_prism(), 1);
 import_prismjs.default.languages.mcfunction = {
   "comment": /^#.*/gm,
-  "keyword": /(?<=run\s|^)(?:advancement|attribute|ban|ban-ip|banlist|bossbar|clear|clone|damage|data|datapack|debug|defaultgamemode|deop|difficulty|effect|enchant|execute|experience|fill|fillbiome|forceload|function|gamemode|gamerule|give|help|item|jfr|kick|kill|list|locate|loot|me|msg|op|pardon|pardon-ip|particle|perf|place|playsound|publish|random|recipe|reload|return|ride|rotate|save-all|save-off|save-on|say|schedule|scoreboard|seed|setblock|setidletimeout|setworldspawn|spawnpoint|spectate|spreadplayers|stop|stopsound|summon|tag|team|teammsg|teleport|tell|tellraw|tick|time|title|tm|tp|transfer|trigger|warden_spawn_tracker|weather|whitelist|worldborder|xp)\b/gm,
+  "keyword": {
+    "pattern": /(?<=run\s|^\s*?)(?:advancement|attribute|ban|ban-ip|banlist|bossbar|clear|clone|damage|data|datapack|debug|defaultgamemode|deop|difficulty|effect|enchant|execute|experience|fill|fillbiome|forceload|function|gamemode|gamerule|give|help|item|jfr|kick|kill|list|locate|loot|me|msg|op|pardon|pardon-ip|particle|perf|place|playsound|publish|random|recipe|reload|return|ride|rotate|save-all|save-off|save-on|say|schedule|scoreboard|seed|setblock|setidletimeout|setworldspawn|spawnpoint|spectate|spreadplayers|stop|stopsound|summon|tag|team|teammsg|teleport|tell|tellraw|tick|time|title|tm|tp|transfer|trigger|warden_spawn_tracker|weather|whitelist|worldborder|xp)\b/gm,
+    "lookbehind": true
+  },
   "selector": /@[anspre]/gm,
   "namespace": /\b\w+?:[\w\/\.]+/gm,
   "number": /\b\d+[bfdBFD]?\b/gm,
   "punctuation": /[~^\\]|\$\(|(?:\)(?<=$([^)]*)))/gm,
-  "operator": /:|=|\+=|-=|\*=|%=|\/|<|>|></gm,
+  "operator": /:|=|\+=|-=|\*=|%=|\/|<|>|><|entity|storage|block/gm,
   "boolean": /\b(?:false|true|1b|0b)\b/gm,
   "string": {
     "pattern": /(?:(^|[^\\])"(?:\\.|[^\\"\r\n:])*"(?!\s*:))|(?<=say).*|(?<=tag=)\w*/gm,
@@ -3466,7 +3469,41 @@ import_prismjs.default.languages.mcfunction = {
     "lookbehind": true,
     "greedy": true
   },
-  "variable": /\b(?:align|anchored|as|at|facing|in|on|positioned|rotated|store|summon|run|(?:if|unless))\b/gm,
+  "variable": /\b(?:align|anchored|as|at|facing|in|on|positioned|rotated|store|summon|run|(?:if|unless)|modify|from|value)\b/gm,
+  "function": {
+    "pattern": /(?<=if|unless|result|success)\s(?:biome|block|blocks|data|dimension|entity|function|items|loaded|predicate|score)\b/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "symbol": {
+    "pattern": /(?:#.+?\b)|(?<=@[anspre]\[(?:.*,)?).*?(?==)/gm,
+    "lookbehind": true,
+    "greedy": true
+  }
+};
+import_prismjs.default.languages.mcf = {
+  "comment": /^#.*/gm,
+  "keyword": {
+    "pattern": /(?<=run\s|^\s*?)(?:advancement|attribute|ban|ban-ip|banlist|bossbar|clear|clone|damage|data|datapack|debug|defaultgamemode|deop|difficulty|effect|enchant|execute|experience|fill|fillbiome|forceload|function|gamemode|gamerule|give|help|item|jfr|kick|kill|list|locate|loot|me|msg|op|pardon|pardon-ip|particle|perf|place|playsound|publish|random|recipe|reload|return|ride|rotate|save-all|save-off|save-on|say|schedule|scoreboard|seed|setblock|setidletimeout|setworldspawn|spawnpoint|spectate|spreadplayers|stop|stopsound|summon|tag|team|teammsg|teleport|tell|tellraw|tick|time|title|tm|tp|transfer|trigger|warden_spawn_tracker|weather|whitelist|worldborder|xp)\b/gm,
+    "lookbehind": true
+  },
+  "selector": /@[anspre]/gm,
+  "namespace": /\b\w+?:[\w\/\.]+/gm,
+  "number": /\b\d+[bfdBFD]?\b/gm,
+  "punctuation": /[~^\\]|\$\(|(?:\)(?<=$([^)]*)))/gm,
+  "operator": /:|=|\+=|-=|\*=|%=|\/|<|>|><|entity|storage|block/gm,
+  "boolean": /\b(?:false|true|1b|0b)\b/gm,
+  "string": {
+    "pattern": /(?:(^|[^\\])"(?:\\.|[^\\"\r\n:])*"(?!\s*:))|(?<=say).*|(?<=tag=)\w*/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "property": {
+    "pattern": /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "variable": /\b(?:align|anchored|as|at|facing|in|on|positioned|rotated|store|summon|run|(?:if|unless)|modify|from|value)\b/gm,
   "function": {
     "pattern": /(?<=if|unless|result|success)\s(?:biome|block|blocks|data|dimension|entity|function|items|loaded|predicate|score)\b/gm,
     "lookbehind": true,
@@ -5209,6 +5246,7 @@ var EditorSelection = class {
 };
 
 // src/main.ts
+var import_prismjs2 = __toESM(require_prism(), 1);
 var default_options2 = {
   "nav": {
     "header": true,
@@ -5253,6 +5291,7 @@ var default_options2 = {
 var Editor = class {
   #parent_element;
   #options;
+  #place_holder;
   #wrapper;
   #nav;
   #bott_nav;
@@ -5273,9 +5312,10 @@ var Editor = class {
   //                                                         CONSTRUCTOR + HTML GEN                                                                 
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // ==========================================================================================================================================
-  constructor(parent_element, width = "100%", height = "40vh", options = {}) {
+  constructor(parent_element, options = {}, width = "100%", height = "40vh", placeholder = "Enter text here, you can use markdown formatting.") {
     if (!parent_element) throw Error("[Infill]: Failed to instantiate new editor. No parent element provided!");
     this.#parent_element = parent_element;
+    this.#place_holder = placeholder;
     this.#options = {};
     for (const [option, value] of Object.entries(default_options2)) {
       if (options[option] !== void 0) {
@@ -5386,6 +5426,7 @@ var Editor = class {
     this.#toggle_check.setAttribute("checked", "");
     this.#toggle_check.classList.add("infill-toggle-check");
     this.#toggle_check.addEventListener("click", () => this.#click_toggle());
+    this.#toggle_check.addEventListener("pointerdown", () => this.#register_focus());
     toggle_wrapper.appendChild(this.#toggle_check);
     let toggle_gutter = document.createElement("div");
     toggle_gutter.classList.add("infill-toggle-gutter");
@@ -5401,6 +5442,7 @@ var Editor = class {
     this.#input.setAttribute("name", "infill-editor-input");
     this.#input.addEventListener("beforeinput", (e) => this.#before_input(e));
     this.#input.addEventListener("input", () => this.#update_markdown_render());
+    this.#input.addEventListener("blur", () => this.#update_markdown_render());
     this.#editor.appendChild(this.#input);
     this.#text_display = document.createElement("div");
     this.#text_display.classList.add("infill-editor-display");
@@ -5443,6 +5485,7 @@ var Editor = class {
     this.#gen_btn(this.#bott_nav_right, () => this.#export_file(), '<i class="infill-icon infill-icon-export"></i>', "Export File");
     this.#gen_btn(this.#bott_nav_right, () => this.#import_file(), '<i class="infill-icon infill-icon-import"></i>', "Open File");
     this.#register_history_state();
+    this.#update_markdown_render();
   }
   // -------------------------------
   //  Generate the html for a btn                            
@@ -5505,24 +5548,31 @@ var Editor = class {
   //  Slider                            
   // -------------------------------
   #slider_change() {
-    console.log("SLIDE");
     let scale = 1;
     const slider_value = Number(this.#slider.value);
     scale = 0.5 * Math.pow(4, slider_value / 100);
     this.#text_display.style.fontSize = `${scale * 16}px`;
     this.#input.style.fontSize = `${scale * 16}px`;
+    this.#selection?.update_render();
   }
   // -------------------------------
   //  Toggle button                            
   // -------------------------------
+  #editor_had_focus = false;
+  // Register if the editor is focused just before it will lose focus due to clicking on the toggle
+  #register_focus() {
+    this.#editor_had_focus = document.activeElement === this.#input;
+  }
   #click_toggle() {
     const enabled = this.#toggle_check.checked;
+    console.log("CHECK");
     if (enabled) {
       this.#wrapper.classList.remove("infill-parsing-disabled");
-      this.set_cursor(this.#input.selectionStart, document.activeElement !== this.#input);
+      window.setTimeout(() => this.set_cursor(this.#input.selectionStart, !this.#editor_had_focus), 10);
       this.#update_markdown_render();
     } else {
       this.#wrapper.classList.add("infill-parsing-disabled");
+      if (this.#editor_had_focus) this.#input.focus();
     }
   }
   // ==========================================================================================================================================
@@ -5545,6 +5595,9 @@ var Editor = class {
   #update_markdown_render() {
     let markdown_input = this.#input.value;
     if (!this.#toggle_check.checked) return;
+    if (markdown_input.length === 0 && document.activeElement !== this.#input) {
+      markdown_input = `<span class="infill-placeholder">${this.#place_holder}</span>`;
+    }
     const cursor_pos = this.#input.selectionStart;
     markdown_input = markdown_input.slice(0, cursor_pos) + "\uE003" + markdown_input.slice(cursor_pos);
     console.log(markdown_input);
@@ -5553,7 +5606,14 @@ var Editor = class {
     console.log(this.#last_parse.html);
     let text2 = purify.sanitize(this.#last_parse.html);
     console.log(this.#last_parse.html);
-    this.#text_display.innerHTML = text2.replaceAll("\uE003", '<i class="infill-editor-cursor"></i>');
+    this.#text_display.innerHTML = text2;
+    import_prismjs2.default.highlightAllUnder(this.#wrapper);
+    this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll("\uE003", '<i class="infill-editor-cursor"></i>');
+    document.getElementsByClassName("infill-editor-cursor")[0]?.scrollIntoView({
+      "behavior": "instant",
+      "block": "nearest",
+      "inline": "center"
+    });
   }
   // ==========================================================================================================================================
   // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -5656,19 +5716,28 @@ var Editor = class {
   #mouse_down = false;
   #mouse_hold = false;
   #hold_timeout = null;
+  #last_click = 0;
+  #last_click_pos = 0;
   // -------------------------------
   //  Mouse down                            
   // -------------------------------
   #editor_mouse_down(e) {
     if (e.target === null || !(e.target instanceof Node)) return;
     if (!this.#toggle_check.checked) return;
+    const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+    if (this.#last_click + 300 > Date.now() && this.#last_click_pos !== void 0 && cursor === this.#last_click_pos) {
+      if (e.pointerType === "mouse") this.#select_word();
+      this.#last_click = Date.now();
+      return;
+    }
+    this.#last_click = Date.now();
+    this.#last_click_pos = cursor;
     this.#mouse_hold = false;
     if (this.#selection_mask.contains(e.target)) {
       return;
     } else if (this.#editor.contains(e.target)) {
       this.#mouse_down = true;
       this.#anchor_pos = [e.clientX, e.clientY];
-      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       this.#selection?.discard();
       if (cursor === void 0) return this.#selection = null;
       this.#target_line_offs = null;
@@ -5696,7 +5765,7 @@ var Editor = class {
   // -------------------------------
   #editor_mouse_move(e) {
     if (!this.#toggle_check.checked) return;
-    if (this.#mouse_down && e.pointerType === "mouse") {
+    if (this.#mouse_down && e.pointerType === "mouse" && this.#input.value.length > 0) {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) this.#selection?.set_end(cursor);
     }
@@ -5706,7 +5775,7 @@ var Editor = class {
       if (start_x === void 0 || start_y === void 0) return;
       let dist = (start_x - e.clientX) ** 2 + (start_y - e.clientY) ** 2;
       if (dist >= 64) {
-        if (e.pointerType === "mouse") {
+        if (e.pointerType === "mouse" && this.#input.value.length > 0) {
           this.#selection?.apply();
           this.#target_line_offs = null;
         }
@@ -5734,7 +5803,7 @@ var Editor = class {
     }
     if (this.#mouse_down) {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-      if (cursor !== void 0) this.#selection?.set_end(cursor);
+      if (cursor !== void 0 && this.#input.value.length > 0) this.#selection?.set_end(cursor);
       if (cursor !== void 0) {
         const mapped_pos = this.#map_cursor_pos(cursor);
         if (mapped_pos !== void 0) window.setTimeout(() => this.set_cursor(mapped_pos), 10);
@@ -5790,7 +5859,6 @@ var Editor = class {
   }
   // Adjust selection
   #selection_thumb_move(e) {
-    console.log("MOVE");
     if (this.#thumb_down) {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) {
@@ -6125,6 +6193,29 @@ var Editor = class {
     if (this.#selection.length === 0) {
       this.#selection.discard();
     }
+  }
+  // -------------------------------
+  //  Select word                            
+  // -------------------------------
+  #select_word() {
+    if (this.#selection !== null && this.#selection?.visible) return;
+    const word_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const cursor = this.#input.selectionStart;
+    let start = cursor;
+    while (word_chars.includes(this.#input.value.charAt(start - 1)) && start > 0) {
+      start--;
+    }
+    let end = cursor;
+    while (word_chars.includes(this.#input.value.charAt(end)) && end < this.#input.value.length) {
+      end++;
+    }
+    const mapped_start = this.#inverse_map_cursor_pos(start);
+    const mapped_end = this.#inverse_map_cursor_pos(end);
+    this.#selection?.discard();
+    this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, mapped_start, mapped_end);
+    this.#selection_anchor = Math.min(start, end);
+    this.set_cursor(Math.max(start, end));
+    this.#selection.apply();
   }
   // -------------------------------
   //  Escape selection                            
