@@ -6,7 +6,7 @@
     },
     "scripts": {
         "build": "npx tsup src/main.ts --format esm,cjs,iife --dts --clean --global-name Infill",
-        "demo": "cd ./demo && php -S localhost:8001"
+        "demo": "cd ./demo && php -S localhost:8002"
     },
     "name": "@theblackswitch/infill",
     "version": "0.1.0",
@@ -44,7 +44,7 @@
     ],
     "description": "A live in-text markdown editor powered by YAMP.",
     "dependencies": {
-        "@theblackswitch/yamp": "^0.1.5",
+        "@theblackswitch/yamp": "^0.2.0",
         "dompurify": "^3.4.14",
         "prismjs": "^1.30.0"
     }
