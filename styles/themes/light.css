@@ -1,0 +1,59 @@
+
+@import url('https://cdn.jsdelivr.net/npm/prismjs/themes/prism-coy.min.css');
+@layer infill-default-theme {
+
+    :root {
+        --infill-text-color: #232222;                                   /* The default text color */
+        --infill-placeholder-text-color: #5f5f5f;                       /* The text color of the placeholder */
+
+        --infill-tooltip-color: #c4c4c4;                                /* The background color of the button's tooltip */
+        --infill-tooltip-border: 1px solid #929292;                     /* The border of the button's tooltip */
+        --infill-tooltip-text-color: #474747;                           /* The text color of the button's tooltip */
+
+        --infill-nav-background-color: #d2d2d2;                         /* The background color of the top nav bar */
+        --infill-nav-bottom-background-color: #d2d2d2;                  /* The background color of the bottom nav bar */
+        --infill-nav-border-radius: 5px 5px 0px 0px;                      /* The border radius of the top nav bar */
+        --infill-nav-bottom-border-radius: 0px 0px 5px 5px;               /* The border radius of the bottom nav bar */
+        --infill-nav-block-separator-color: #c4c4c4;                    /* The color of the separator between each button group */
+        
+        --infill-nav-gutter-color: #b3b3b3;                             /* The gutter color of the zoom slider */
+        --infill-nav-slider-thumb-color: #eeeeee;                          /* The thumb color of the zoom slider */
+
+        --infill-nav-toggle-active-color: #00c184;                      /* The active color of the markdown toggle */
+        --infill-nav-toggle-inactive-color: #009166;                    /* The inactive color of the markdown toggle */
+
+        --infill-nav-button-color: #eeeeee;                             /* The nav buttons background color */
+        --infill-nav-button-hover-color: #ffffff;                       /* The hover color of the nav buttons */
+        --infill-nav-button-hover-zoom: 1.05;                             /* The hover zoom factor of the nav buttons */
+        --infill-nav-button-active-zoom: 1.075;                           /* The zoom factor of the nav buttons when clicked */
+        --infill-nav-button-border-radius: 3px;                           /* The border radius of the nav buttons */
+
+        --infill-editor-border-color: #d2d2d2;                          /* The color of the border around the editor*/
+        --infill-editor-background-color: #e4e4e4;                      /* The background color of the main editor box */
+        --infill-editor-selection-color: #4433FF;                       /* The color of the selection overlay when selecting text */
+        --infill-editor-select-thumb-color: #5d6af4;                    /* Th color of the thumbs used to adjust selections on mobile */
+        --infill-editor-scrollbar-background-color: #424242;            /* The background color of the editor's scrollbar */
+        --infill-editor-scrollbar-thumb-color: #616161;                 /* The thumb color of the editor's scrollbar */
+
+        --infill-table-outer-border-color: 1px solid #666;              /* The outer border of a displayed table element */
+        --infill-table-inner-border-color: 1px solid #555;              /* The inner border of a displayed table element */
+        --infill-table-background-color: #222222;                       /* The background color of a generic table cell */
+        --infill-table-head-color: #2F2F2F;                             /* The background color of a head cell */
+
+        --infill-blockquote-border: 5px solid #aeaeae;                  /* The border of a blockquote element */
+        --infill-blockquote-text-color: #777;                           /* The text color of a blockquote element */
+
+        --infill-code-background-color: #b6b6b6;                        /* The background color of a codeblock or code element */
+        --infill-code-border: 1px solid #515151;                        /* The border of a codeblock or code element */
+        --infill-code-border-radius: 5px;                                 /* The border radius of a code or codeblock element */
+
+        --infill-link-color: #4eabfc;                                   /* The default color of a link element */
+        --infill-link-border: 2px solid rgba(134, 134, 245, 0);         /* The default border of a link element */
+        --infill-link-hover-color: #5e7cf6;                                /* The hover color of a link element */
+        --infill-link-hover-border: 2px solid rgb(134, 134, 245, 1);    /* The hover border of a link element */
+
+        --infill-hr-color: #343434;                                     /* The color of the hr line separator */
+
+        --infill-html-highlight-color: #a2a2a0;                            /* The background color of the <mark> element */
+    }
+}

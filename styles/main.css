@@ -4,7 +4,10 @@
 // ------------------------------------------------------------------------------------------------------------------------------------------ //
 // ========================================================================================================================================== */
 
+@import url('https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.min.css');
 @layer infill-default-theme {
+    
+
     :root {
         --infill-text-color: #aaa;                                      /* The default text color */
         --infill-placeholder-text-color: #666;                          /* The text color of the placeholder */
@@ -26,6 +29,7 @@
         --infill-nav-toggle-inactive-color: #009166;                    /* The inactive color of the markdown toggle */
 
         --infill-nav-button-color: #535353;                             /* The nav buttons background color */
+        --infill-nav-button-text-color: #aaa;                             /* The nav buttons background color */
         --infill-nav-button-hover-color: #606060;                       /* The hover color of the nav buttons */
         --infill-nav-button-hover-zoom: 1.05;                             /* The hover zoom factor of the nav buttons */
         --infill-nav-button-active-zoom: 1.075;                           /* The zoom factor of the nav buttons when clicked */
@@ -220,6 +224,7 @@
     transition: translation 0.3s, background-color 0.3s;
     cursor: pointer;
     user-select: none;
+    color: var(--infill-nav-button-text-color);
 }
 
 @media (pointer: fine) {
@@ -273,8 +278,7 @@
 }
 
 .infill-icon {
-    color: var(--infill-text-color);
-    background-color: var(--infill-text-color);
+    background-color: currentColor;
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
@@ -548,6 +552,7 @@
     scrollbar-width: thin;
     scrollbar-color: var(--infill-editor-scrollbar-thumb-color) var(--infill-editor-scrollbar-background-color);
     scroll-padding: 25%;
+    color: var(--infill-text-color);
 }
 
 /* ============================== //
