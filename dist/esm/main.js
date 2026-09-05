@@ -5360,6 +5360,8 @@ var Editor = class {
   #selection_mask;
   #slider;
   #toggle_check;
+  #width;
+  #height;
   #history = {
     "undo_states": [],
     "redo_states": []
@@ -5369,7 +5371,7 @@ var Editor = class {
   //                                                         CONSTRUCTOR + HTML GEN                                                                 
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // ==========================================================================================================================================
-  constructor(parent_element, options = {}, width = "100%", height = "40vh", placeholder = "Enter text here, you can use markdown formatting.") {
+  constructor(parent_element, options = {}, width = "100%", height = "60vh", placeholder = "Enter text here, you can use markdown formatting.") {
     if (!parent_element) throw Error("[Infill]: Failed to instantiate new editor. No parent element provided!");
     this.#parent_element = parent_element;
     this.#place_holder = placeholder;
@@ -5404,6 +5406,8 @@ var Editor = class {
     this.#wrapper = document.createElement("div");
     this.#wrapper.classList.add("infill-editor-wrapper");
     this.#parent_element.appendChild(this.#wrapper);
+    this.#width = width;
+    this.#height = height;
     this.#wrapper.style.width = width;
     this.#wrapper.style.height = height;
     const resizeObserver = new ResizeObserver((entries2) => {
@@ -5412,9 +5416,9 @@ var Editor = class {
         const contentBoxSize = entry.contentBoxSize[0];
         const width2 = entry.contentRect.width;
         if (width2 < 620) {
-          this.#wrapper.style.height = `calc(${height} * 0.7)`;
+          this.#wrapper.style.height = `calc(${this.#height} * 0.7)`;
         } else {
-          this.#wrapper.style.height = height;
+          this.#wrapper.style.height = this.#height;
         }
       }
     });
@@ -6449,10 +6453,10 @@ var Editor = class {
   // -------------------------------
   //  Getters                            
   // -------------------------------
-  get markdown() {
+  get_markdown() {
     return this.#input.value;
   }
-  get html() {
+  get_html() {
     return this.#last_parse.html;
   }
   get_button_state() {
@@ -6473,9 +6477,18 @@ var Editor = class {
     this.#toggle_check.checked = state.markdown_enabled;
     this.#click_toggle();
   }
-  set markdown(value) {
+  set_markdown(value) {
     this.#input.value = value;
     this.#update_markdown_render();
+  }
+  resize(width, height) {
+    this.#width = width;
+    this.#height = height;
+    this.#wrapper.style.width = width;
+    this.#wrapper.style.height = height;
+  }
+  on_input(callback) {
+    this.#input.addEventListener("input", () => callback());
   }
 };
 export {

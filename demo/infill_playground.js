@@ -9,3 +9,7 @@ let editor = new Infill.Editor(editor_parent, {
         "header": true
     }
 }, "100%", "70vh");
+
+editor.on_input(() => {
+    console.log('Hello world');
+});

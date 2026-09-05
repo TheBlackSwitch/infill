@@ -92,6 +92,9 @@ export class Editor {
     #slider: HTMLInputElement;
     #toggle_check: HTMLInputElement;
 
+    #width: string;
+    #height: string;
+
     #history: {undo_states: Array<history_item>, redo_states: Array<history_item>} = {
         "undo_states": [],
         "redo_states": []
@@ -103,7 +106,7 @@ export class Editor {
     // ------------------------------------------------------------------------------------------------------------------------------------------
     // ==========================================================================================================================================
 
-    constructor(parent_element: HTMLElement, options: options = {}, width: string = "100%", height: string = "40vh", placeholder = "Enter text here, you can use markdown formatting.") {
+    constructor(parent_element: HTMLElement, options: options = {}, width: string = "100%", height: string = "60vh", placeholder = "Enter text here, you can use markdown formatting.") {
         if(!parent_element) throw Error('[Infill]: Failed to instantiate new editor. No parent element provided!');
         this.#parent_element = parent_element;
         this.#place_holder = placeholder;
@@ -155,6 +158,8 @@ export class Editor {
         this.#wrapper = document.createElement('div');
         this.#wrapper.classList.add('infill-editor-wrapper');
         this.#parent_element.appendChild(this.#wrapper);
+        this.#width = width;
+        this.#height = height;
         this.#wrapper.style.width = width;
         this.#wrapper.style.height = height;
 
@@ -164,9 +169,9 @@ export class Editor {
                 const contentBoxSize = entry.contentBoxSize[0];
                 const width = entry.contentRect.width;
                 if(width < 620) {
-                    this.#wrapper.style.height = `calc(${height} * 0.7)`;
+                    this.#wrapper.style.height = `calc(${this.#height} * 0.7)`;
                 } else {
-                    this.#wrapper.style.height = height;
+                    this.#wrapper.style.height = this.#height;
                 }
             }
         });
@@ -1694,5 +1699,16 @@ export class Editor {
     set_markdown(value: string) {
         this.#input.value = value;
         this.#update_markdown_render();
+    }
+
+    resize(width: string, height: string) {
+        this.#width = width;
+        this.#height = height;
+        this.#wrapper.style.width = width;
+        this.#wrapper.style.height = height;
+    }
+
+    on_input(callback: Function) {
+        this.#input.addEventListener('input', () => callback());
     }
 }

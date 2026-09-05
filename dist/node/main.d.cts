@@ -43,8 +43,8 @@ declare class Editor {
     #private;
     constructor(parent_element: HTMLElement, options?: options, width?: string, height?: string, placeholder?: string);
     set_cursor(position: number, no_focus?: boolean, no_update?: boolean): void;
-    get markdown(): string;
-    get html(): string;
+    get_markdown(): string;
+    get_html(): string;
     get_button_state(): {
         zoom_slider: string;
         markdown_enabled: boolean;
@@ -54,7 +54,9 @@ declare class Editor {
         zoom_slider: string;
         markdown_enabled: boolean;
     }): void;
-    set markdown(value: string);
+    set_markdown(value: string): void;
+    resize(width: string, height: string): void;
+    on_input(callback: Function): void;
 }
 
 export { Editor, default_options };
