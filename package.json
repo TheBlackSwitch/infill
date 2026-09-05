@@ -9,7 +9,7 @@
         "demo": "cd ./demo && php -S localhost:8002"
     },
     "name": "infill",
-    "version": "0.0.2",
+    "version": "0.2.0",
     "type": "module",
     "main": "./dist/esm/main.js",
     "types": "./dist/node/main.d.ts",
