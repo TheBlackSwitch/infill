@@ -21,6 +21,7 @@ Take a look at the [documentation](https://github.com/TheBlackSwitch/infill/wiki
 ## Demo
 
 ![A demo](https://github.com/TheBlackSwitch/infill/blob/main/ASSETS/Infill_demo.webp)
+Yes this demo contains spelling mistakes. I'm too lazy to fix them and re-edit the video
 
 ## Themes
 
