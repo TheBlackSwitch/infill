@@ -10,7 +10,7 @@ export default defineConfig([
             "prismjs",
             "dompurify"
         ],
-        minify: true,
+        minify: false,
         outDir: "dist/script"
     },
     {
@@ -21,14 +21,14 @@ export default defineConfig([
             "prismjs",
             "dompurify"
         ],
-        minify: true,
+        minify: false,
         outDir: "dist/esm"
     },
     {
         entry: ["src/main.ts"],
         format: "cjs",
-        bundle: false,
         outDir: "dist/node",
-        dts: true
+        dts: true,
+        minify: false
     },
 ]);

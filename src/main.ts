@@ -16,9 +16,10 @@ import type { absolute_map, options } from "./public_types";
 import * as YAMP from "@theblackswitch/yamp";
 import './prismjs_highlight/mcfunction';
 import DOMPurify from 'dompurify'
-import { cursor_pos_from_point, download_file, log_string, touch_only } from './utils';
+import { cursor_pos_from_point, download_file, touch_only } from './utils';
 import { EditorSelection } from './selection';
 import Prism from 'prismjs';
+export * as YAMP from '@theblackswitch/yamp';
 
 interface history_item {
     input_value: string,
@@ -73,7 +74,6 @@ export const default_options: options = {
     ],
     "keyboard_shortcuts_enabled": true
 }
-
 
 export class Editor {
     #parent_element: HTMLElement;
@@ -1588,7 +1588,6 @@ export class Editor {
     // ==========================================================================================================================================
 
     #register_history_state(is_character_change: boolean = false, force_new_state: boolean = false) {
-        log_string('Register history state');
         const item: history_item = {
             "input_value": this.#input.value,
             "cursor_pos": this.#input.selectionStart,
@@ -1597,7 +1596,6 @@ export class Editor {
 
         // Skip this state if the input string is exactly the same as the previous one
         if(item.input_value === this.#history.undo_states[this.#history.undo_states.length - 1]?.input_value) {
-            log_string('return history state :(');
             return;
         }
 
@@ -1615,7 +1613,6 @@ export class Editor {
     }
 
     #undo(e: KeyboardEvent, force_enabled: boolean = false) {
-        log_string(this.#history.undo_states);
         if(!this.#toggle_check.checked && !force_enabled) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1663,11 +1660,11 @@ export class Editor {
     //  Getters                            
     // -------------------------------
 
-    get markdown() {
+    get_markdown() {
         return this.#input.value;
     }
 
-    get html() {
+    get_html() {
         return this.#last_parse.html;
     }
 
@@ -1694,7 +1691,7 @@ export class Editor {
         this.#click_toggle();
     }
     
-    set markdown(value: string) {
+    set_markdown(value: string) {
         this.#input.value = value;
         this.#update_markdown_render();
     }

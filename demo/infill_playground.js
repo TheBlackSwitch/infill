@@ -8,4 +8,4 @@ let editor = new Infill.Editor(editor_parent, {
     "nav": {
         "header": true
     }
-});
+}, "100%", "70vh");

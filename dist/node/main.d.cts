@@ -1,4 +1,6 @@
 import { parsers } from '@theblackswitch/yamp';
+import * as yamp from '@theblackswitch/yamp';
+export { yamp as YAMP };
 
 declare global {
     interface Navigator {

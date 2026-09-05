@@ -26,20 +26,295 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/main.ts
 var main_exports = {};
 __export(main_exports, {
   Editor: () => Editor,
+  YAMP: () => YAMP2,
   default_options: () => default_options
 });
 module.exports = __toCommonJS(main_exports);
-var import_utils = require("./utils");
+
+// src/utils.ts
+function download_file(data, filename, type) {
+  var file = new Blob([data], { type });
+  if (window.navigator.msSaveOrOpenBlob)
+    window.navigator.msSaveOrOpenBlob(file, filename);
+  else {
+    var a = document.createElement("a"), url = URL.createObjectURL(file);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 0);
+  }
+}
+function cursor_pos_from_point(root_element, x, y) {
+  let carret_node;
+  let local_offset = 0;
+  if (typeof document.caretPositionFromPoint === "function") {
+    let carret_position = document.caretPositionFromPoint(x, y);
+    if (!carret_position) return null;
+    carret_node = carret_position.offsetNode;
+    local_offset = carret_position.offset;
+  } else if (typeof document.caretRangeFromPoint === "function") {
+    let carret_position = document.caretRangeFromPoint(x, y);
+    if (!carret_position) return null;
+    carret_node = carret_position.startContainer;
+    local_offset = carret_position.startOffset;
+  } else {
+    console.warn("You're using an older browser, selecting in the editor is not supported here!");
+    return null;
+  }
+  const walker = document.createTreeWalker(root_element, NodeFilter.SHOW_ALL);
+  let offset = 0;
+  while (true) {
+    let node = walker.nextNode();
+    if (!node) return null;
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (carret_node === node) {
+        offset += local_offset;
+        break;
+      }
+      if (node.textContent) offset += node.textContent.length;
+    }
+  }
+  return {
+    "global": offset,
+    "local": local_offset
+  };
+}
+
+// src/main.ts
 var YAMP = __toESM(require("@theblackswitch/yamp"), 1);
-var import_mcfunction = require("./prismjs_highlight/mcfunction");
-var import_dompurify = __toESM(require("dompurify"), 1);
-var import_utils2 = require("./utils");
-var import_selection = require("./selection");
+
+// src/prismjs_highlight/mcfunction.ts
 var import_prismjs = __toESM(require("prismjs"), 1);
-const default_options = {
+import_prismjs.default.languages.mcfunction = {
+  "comment": /^#.*/gm,
+  "keyword": {
+    "pattern": /(?<=run\s|^\s*?)(?:advancement|attribute|ban|ban-ip|banlist|bossbar|clear|clone|damage|data|datapack|debug|defaultgamemode|deop|difficulty|effect|enchant|execute|experience|fill|fillbiome|forceload|function|gamemode|gamerule|give|help|item|jfr|kick|kill|list|locate|loot|me|msg|op|pardon|pardon-ip|particle|perf|place|playsound|publish|random|recipe|reload|return|ride|rotate|save-all|save-off|save-on|say|schedule|scoreboard|seed|setblock|setidletimeout|setworldspawn|spawnpoint|spectate|spreadplayers|stop|stopsound|summon|tag|team|teammsg|teleport|tell|tellraw|tick|time|title|tm|tp|transfer|trigger|warden_spawn_tracker|weather|whitelist|worldborder|xp)\b/gm,
+    "lookbehind": true
+  },
+  "selector": /@[anspre]/gm,
+  "namespace": /\b\w+?:[\w\/\.]+/gm,
+  "number": /\b\d+[bfdBFD]?\b/gm,
+  "punctuation": /[~^\\]|\$\(|(?:\)(?<=$([^)]*)))/gm,
+  "operator": /:|=|\+=|-=|\*=|%=|\/|<|>|><|entity|storage|block/gm,
+  "boolean": /\b(?:false|true|1b|0b)\b/gm,
+  "string": {
+    "pattern": /(?:(^|[^\\])"(?:\\.|[^\\"\r\n:])*"(?!\s*:))|(?<=say).*|(?<=tag=)\w*/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "property": {
+    "pattern": /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "variable": /\b(?:align|anchored|as|at|facing|in|on|positioned|rotated|store|summon|run|(?:if|unless)|modify|from|value)\b/gm,
+  "function": {
+    "pattern": /(?<=if|unless|result|success)\s(?:biome|block|blocks|data|dimension|entity|function|items|loaded|predicate|score)\b/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "symbol": {
+    "pattern": /(?:#.+?\b)|(?<=@[anspre]\[(?:.*,)?).*?(?==)/gm,
+    "lookbehind": true,
+    "greedy": true
+  }
+};
+import_prismjs.default.languages.mcf = {
+  "comment": /^#.*/gm,
+  "keyword": {
+    "pattern": /(?<=run\s|^\s*?)(?:advancement|attribute|ban|ban-ip|banlist|bossbar|clear|clone|damage|data|datapack|debug|defaultgamemode|deop|difficulty|effect|enchant|execute|experience|fill|fillbiome|forceload|function|gamemode|gamerule|give|help|item|jfr|kick|kill|list|locate|loot|me|msg|op|pardon|pardon-ip|particle|perf|place|playsound|publish|random|recipe|reload|return|ride|rotate|save-all|save-off|save-on|say|schedule|scoreboard|seed|setblock|setidletimeout|setworldspawn|spawnpoint|spectate|spreadplayers|stop|stopsound|summon|tag|team|teammsg|teleport|tell|tellraw|tick|time|title|tm|tp|transfer|trigger|warden_spawn_tracker|weather|whitelist|worldborder|xp)\b/gm,
+    "lookbehind": true
+  },
+  "selector": /@[anspre]/gm,
+  "namespace": /\b\w+?:[\w\/\.]+/gm,
+  "number": /\b\d+[bfdBFD]?\b/gm,
+  "punctuation": /[~^\\]|\$\(|(?:\)(?<=$([^)]*)))/gm,
+  "operator": /:|=|\+=|-=|\*=|%=|\/|<|>|><|entity|storage|block/gm,
+  "boolean": /\b(?:false|true|1b|0b)\b/gm,
+  "string": {
+    "pattern": /(?:(^|[^\\])"(?:\\.|[^\\"\r\n:])*"(?!\s*:))|(?<=say).*|(?<=tag=)\w*/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "property": {
+    "pattern": /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "variable": /\b(?:align|anchored|as|at|facing|in|on|positioned|rotated|store|summon|run|(?:if|unless)|modify|from|value)\b/gm,
+  "function": {
+    "pattern": /(?<=if|unless|result|success)\s(?:biome|block|blocks|data|dimension|entity|function|items|loaded|predicate|score)\b/gm,
+    "lookbehind": true,
+    "greedy": true
+  },
+  "symbol": {
+    "pattern": /(?:#.+?\b)|(?<=@[anspre]\[(?:.*,)?).*?(?==)/gm,
+    "lookbehind": true,
+    "greedy": true
+  }
+};
+
+// src/main.ts
+var import_dompurify = __toESM(require("dompurify"), 1);
+
+// src/selection.ts
+var EditorSelection = class {
+  #start = 0;
+  #end = 0;
+  #parent_element;
+  #selection_mask;
+  #visible = false;
+  #mobile_mode = false;
+  #on_thumb_down;
+  #elems = [];
+  constructor(parent, selection_mask, start, end, mobile_mode = false, on_thumb_down = () => {
+  }) {
+    this.#start = start;
+    this.#end = end;
+    this.#parent_element = parent;
+    this.#selection_mask = selection_mask;
+    this.#mobile_mode = mobile_mode;
+    this.#on_thumb_down = on_thumb_down;
+  }
+  // -------------------------------
+  //  Visiblity                            
+  // -------------------------------
+  apply() {
+    this.#visible = true;
+    this.update_render();
+  }
+  discard() {
+    this.#visible = false;
+    this.update_render();
+  }
+  // -------------------------------
+  //  Range handeling                            
+  // -------------------------------
+  set_start(position) {
+    this.#start = position;
+    this.update_render();
+  }
+  set_end(position) {
+    this.#end = position;
+    this.update_render();
+  }
+  // -------------------------------
+  //  Getters                            
+  // -------------------------------
+  // Lower and higher selection bounds
+  get lo() {
+    return Math.min(this.#start, this.#end);
+  }
+  get hi() {
+    return Math.max(this.#start, this.#end);
+  }
+  get end() {
+    return this.#end;
+  }
+  get start() {
+    return this.#start;
+  }
+  get visible() {
+    return this.#visible;
+  }
+  get length() {
+    return Math.abs(this.#start - this.#end);
+  }
+  get is_mobile() {
+    return this.#mobile_mode;
+  }
+  // -------------------------------
+  //  Rendering                            
+  // -------------------------------
+  update_render() {
+    for (const elem of this.#elems) {
+      elem.remove();
+    }
+    if (this.#visible) {
+      const start_node = this.#cursor_pos_to_node(Math.min(this.#start, this.#end));
+      const end_node = this.#cursor_pos_to_node(Math.max(this.#start, this.#end));
+      if (start_node === null || end_node === null) return;
+      const range = document.createRange();
+      console.log(start_node, end_node);
+      range.setStart(start_node.node, start_node.offset);
+      range.setEnd(end_node.node, end_node.offset);
+      const parent_rect = this.#parent_element.getBoundingClientRect();
+      const rects = range.getClientRects();
+      for (const rect of rects) {
+        const elem = document.createElement("div");
+        elem.classList.add("infill-selection");
+        elem.style.left = `${rect.left - parent_rect.left}px`;
+        elem.style.top = `${rect.top - parent_rect.top}px`;
+        elem.style.width = `${rect.width}px`;
+        elem.style.height = `${rect.height}px`;
+        this.#selection_mask.appendChild(elem);
+        this.#elems.push(elem);
+      }
+      if (this.#mobile_mode && rects.length > 0) {
+        const start = rects[0];
+        const end = rects[rects.length - 1];
+        if (end === void 0 || start === void 0) return;
+        const select_start_thumb = document.createElement("div");
+        select_start_thumb.classList.add("infill-editor-select-thumb", "infill-start");
+        select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 1.5}px`;
+        select_start_thumb.style.top = `${start.top - parent_rect.top - 10}px`;
+        select_start_thumb.style.height = `${start.height * 1.5}px`;
+        select_start_thumb.style.width = `${start.height * 1.5}px`;
+        select_start_thumb.addEventListener("pointerdown", (e) => this.#on_thumb_down(e, "start"));
+        const select_end_thumb = document.createElement("div");
+        select_end_thumb.classList.add("infill-editor-select-thumb", "infill-end");
+        select_end_thumb.style.left = `${end.right - parent_rect.left - 20}px`;
+        select_end_thumb.style.top = `${end.top - parent_rect.top - 10}px`;
+        select_end_thumb.style.height = `${end.height * 1.5}px`;
+        select_end_thumb.style.width = `${end.height * 1.5}px`;
+        select_end_thumb.addEventListener("pointerdown", (e) => this.#on_thumb_down(e, "end"));
+        this.#selection_mask.appendChild(select_start_thumb);
+        this.#selection_mask.appendChild(select_end_thumb);
+        this.#elems.push(select_start_thumb);
+        this.#elems.push(select_end_thumb);
+      }
+    }
+  }
+  // -------------------------------
+  //  Utilities                            
+  // -------------------------------
+  // Get the node corresponding to the character position provided
+  #cursor_pos_to_node(position) {
+    if (!this.#parent_element) return null;
+    const walker = document.createTreeWalker(this.#parent_element, NodeFilter.SHOW_TEXT);
+    let offset = 0;
+    while (true) {
+      let node = walker.nextNode();
+      if (!node) return null;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const len = node.nodeValue?.length;
+        if (len === void 0) continue;
+        if (offset + len >= position) {
+          return {
+            "node": node,
+            "offset": position - offset
+            // Calc the local offset inside this node
+          };
+        }
+        offset += len;
+      }
+    }
+  }
+};
+
+// src/main.ts
+var import_prismjs2 = __toESM(require("prismjs"), 1);
+var YAMP2 = __toESM(require("@theblackswitch/yamp"), 1);
+var default_options = {
   "nav": {
     "header": true,
     "bold": true,
@@ -80,7 +355,7 @@ const default_options = {
   ],
   "keyboard_shortcuts_enabled": true
 };
-class Editor {
+var Editor = class {
   #parent_element;
   #options;
   #place_holder;
@@ -422,7 +697,7 @@ class Editor {
     let text = import_dompurify.default.sanitize(this.#last_parse.html);
     console.log(this.#last_parse.html);
     this.#text_display.innerHTML = text;
-    import_prismjs.default.highlightAllUnder(this.#wrapper);
+    import_prismjs2.default.highlightAllUnder(this.#wrapper);
     this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll("\uE003", '<i class="infill-editor-cursor"></i>');
     document.getElementsByClassName("infill-editor-cursor")[0]?.scrollIntoView({
       "behavior": "instant",
@@ -546,7 +821,7 @@ class Editor {
   #editor_mouse_down(e) {
     if (e.target === null || !(e.target instanceof Node)) return;
     if (!this.#toggle_check.checked) return;
-    const cursor = (0, import_utils2.cursor_pos_from_point)(this.#text_display, e.clientX, e.clientY)?.global;
+    const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
     if (this.#last_click + 300 > Date.now() && this.#last_click_pos !== void 0 && cursor === this.#last_click_pos) {
       if (e.pointerType === "mouse") this.#select_word();
       this.#last_click = Date.now();
@@ -566,7 +841,7 @@ class Editor {
       const mapped_pos = this.#map_cursor_pos(cursor);
       if (mapped_pos === void 0) return;
       this.#selection_anchor = mapped_pos;
-      this.#selection = new import_selection.EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
+      this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
       if (e.pointerType !== "mouse") this.#hold_timeout = window.setTimeout(() => {
         if (!this.#mouse_down) return;
         this.#mouse_hold = true;
@@ -588,7 +863,7 @@ class Editor {
   #editor_mouse_move(e) {
     if (!this.#toggle_check.checked) return;
     if (this.#mouse_down && e.pointerType === "mouse" && this.#input.value.length > 0) {
-      const cursor = (0, import_utils2.cursor_pos_from_point)(this.#text_display, e.clientX, e.clientY)?.global;
+      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) {
         const mapped = this.#map_cursor_pos(cursor);
         if (mapped !== void 0) this.set_cursor(mapped);
@@ -628,7 +903,7 @@ class Editor {
       return;
     }
     if (this.#mouse_down) {
-      const cursor = (0, import_utils2.cursor_pos_from_point)(this.#text_display, e.clientX, e.clientY)?.global;
+      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0 && this.#input.value.length > 0) this.#selection?.set_end(cursor);
       if (cursor !== void 0) {
         const mapped_pos = this.#map_cursor_pos(cursor);
@@ -657,7 +932,7 @@ class Editor {
     const mapped_start = this.#inverse_map_cursor_pos(start);
     const mapped_end = this.#inverse_map_cursor_pos(end);
     this.#selection?.discard();
-    this.#selection = new import_selection.EditorSelection(
+    this.#selection = new EditorSelection(
       this.#text_display,
       this.#selection_mask,
       mapped_start,
@@ -686,7 +961,7 @@ class Editor {
   // Adjust selection
   #selection_thumb_move(e) {
     if (this.#thumb_down) {
-      const cursor = (0, import_utils2.cursor_pos_from_point)(this.#text_display, e.clientX, e.clientY)?.global;
+      const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) {
         if (this.#selected_thumb === "start") {
           this.#selection?.set_start(cursor);
@@ -771,7 +1046,7 @@ class Editor {
       this.#target_line_offs === null;
       this.#selection_anchor = cursor_md_pos;
       this.#input.blur();
-      let sel = new import_selection.EditorSelection(this.#text_display, this.#selection_mask, cursor_html_pos, cursor_html_pos);
+      let sel = new EditorSelection(this.#text_display, this.#selection_mask, cursor_html_pos, cursor_html_pos);
       sel.apply();
       return sel;
     }
@@ -846,7 +1121,7 @@ class Editor {
     if (!this.#toggle_check.checked) return;
     const abs_map = this.#last_parse.char_map.absolute_map;
     if (this.#selection === null || !this.#selection.visible) {
-      this.#selection = new import_selection.EditorSelection(this.#text_display, this.#selection_mask, 0, abs_map.length - 1);
+      this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, 0, abs_map.length - 1);
       this.#selection.apply();
     } else {
       this.#selection.set_start(0);
@@ -1038,7 +1313,7 @@ class Editor {
     const mapped_start = this.#inverse_map_cursor_pos(start);
     const mapped_end = this.#inverse_map_cursor_pos(end);
     this.#selection?.discard();
-    this.#selection = new import_selection.EditorSelection(this.#text_display, this.#selection_mask, mapped_start, mapped_end);
+    this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, mapped_start, mapped_end);
     this.#selection_anchor = Math.min(start, end);
     this.set_cursor(Math.max(start, end));
     this.#selection.apply();
@@ -1126,7 +1401,7 @@ class Editor {
   #export_file() {
     const curr_date = /* @__PURE__ */ new Date();
     let default_file_name = `infill_export_${curr_date.getDate()}-${curr_date.getMonth() + 1}_${curr_date.getHours()}-${curr_date.getMinutes()}.md`;
-    (0, import_utils2.download_file)(this.#input.value, default_file_name, "text/plain");
+    download_file(this.#input.value, default_file_name, "text/plain");
   }
   // ==========================================================================================================================================
   // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -1134,14 +1409,12 @@ class Editor {
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // ==========================================================================================================================================
   #register_history_state(is_character_change = false, force_new_state = false) {
-    (0, import_utils2.log_string)("Register history state");
     const item = {
       "input_value": this.#input.value,
       "cursor_pos": this.#input.selectionStart,
       "is_character_change": is_character_change
     };
     if (item.input_value === this.#history.undo_states[this.#history.undo_states.length - 1]?.input_value) {
-      (0, import_utils2.log_string)("return history state :(");
       return;
     }
     if (is_character_change && !force_new_state && this.#history.undo_states[this.#history.undo_states.length - 1]?.is_character_change) {
@@ -1153,7 +1426,6 @@ class Editor {
     this.#history.redo_states = [];
   }
   #undo(e, force_enabled = false) {
-    (0, import_utils2.log_string)(this.#history.undo_states);
     if (!this.#toggle_check.checked && !force_enabled) return;
     e.preventDefault();
     e.stopPropagation();
@@ -1215,9 +1487,10 @@ class Editor {
     this.#input.value = value;
     this.#update_markdown_render();
   }
-}
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   Editor,
+  YAMP,
   default_options
 });
