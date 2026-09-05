@@ -27,4 +27,5 @@ Take a look at the [documentation](https://github.com/TheBlackSwitch/infill/wiki
 Ontop of the default theme, there are 5 other themes available. You can select these themes by importing their corresponding css file. The css is built in such a way that you're able to easily define custom themes.
 
 ![Themes](https://github.com/TheBlackSwitch/infill/blob/main/ASSETS/infill-themes.gif)
+(Psst, if you're wondering what that cool programming language is, take a look at [mcfunction](https://datapack.wiki/wiki/files/functions) for [datapacks](https://datapack.wiki/guide/datapacks-for-mods/mods-vs-datapacks))
 
