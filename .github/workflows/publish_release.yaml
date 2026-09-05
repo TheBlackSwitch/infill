@@ -66,19 +66,19 @@ jobs:
           **NPM**
 
           \`\`\`
-          npm install @theblackswitch/yamp@$VERSION
+          npm install infill@$VERSION
           \`\`\`
 
           **ES module**
 
           \`\`\`js
-          import * as YAMP from "https://cdn.jsdelivr.net/npm/@theblackswitch/yamp@$VERSION/dist/main.js"
+          import * as Infill from 'https://cdn.jsdelivr.net/npm/infill@$VERSION/dist/esm/main.js'
           \`\`\`
 
           **HTML Script**
 
           \`\`\`html
-          <script src="https://cdn.jsdelivr.net/npm/@theblackswitch/yamp@$VERSION/dist/main.global.js"></script>
+          <script src="https://cdn.jsdelivr.net/npm/infill@$VERSION/dist/script/main.global.js"></script>
           \`\`\`
           EOF
 
