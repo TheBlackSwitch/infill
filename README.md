@@ -1,7 +1,7 @@
 ![The Logo](https://github.com/TheBlackSwitch/infill/blob/main/ASSETS/logo_long.png)
 ![GitHub License](https://img.shields.io/github/license/TheBlackSwitch/infill) ![GitHub Repo stars](https://img.shields.io/github/stars/TheBlackSwitch/infill?style=flat) ![NPM Downloads](https://img.shields.io/npm/dw/infill) ![NPM Version](https://img.shields.io/npm/v/infill)
 
-Infill is a live-in text editor designed for easy integration. It's built on the markdown parser [YAMP](https://github.com/TheBlackSwitch/yamp). Take a look at YAMP if you want to see all infill's available syntax.
+Infill is a live-in text markdowneditor designed for easy integration. It's built on the markdown parser [YAMP](https://github.com/TheBlackSwitch/yamp). Take a look at YAMP if you want to see all infill's available syntax.
 
 Take a look at the [documentation](https://github.com/TheBlackSwitch/infill/wiki) for developer info.
 
