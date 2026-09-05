@@ -407,7 +407,7 @@ export class Editor {
 
         console.log("TEST", before, after);
 
-        // Remove the styling instead of doubling it
+        // Remove the styling instead of duplicating it
         const should_remove_start = before.endsWith(before_cursor) || inside.startsWith(before_cursor);
         const should_remove_end = after.startsWith(after_cursor) || inside.endsWith(after_cursor);
 
@@ -443,7 +443,7 @@ export class Editor {
         this.#input.value = before + inside + after;
 
         // Only move the cursor to the end of everything when selecting
-        const end_offs = (should_remove_end || (this.#selection !== null && this.#selection.visible) ? 0 : after_cursor.length);
+        const end_offs = (should_remove_end || this.#selection === null || !this.#selection.visible ? 0 : after_cursor.length);
 
         if(!this.#selection?.is_mobile) window.setTimeout(() => this.set_cursor(before.length + inside.length + end_offs), 1);
         if(force_linebreak) this.#selection?.discard();

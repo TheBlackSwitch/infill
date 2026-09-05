@@ -345,7 +345,7 @@ class Editor {
       after = after_cursor + after;
     }
     this.#input.value = before + inside + after;
-    const end_offs = should_remove_end || this.#selection !== null && this.#selection.visible ? 0 : after_cursor.length;
+    const end_offs = should_remove_end || this.#selection === null || !this.#selection.visible ? 0 : after_cursor.length;
     if (!this.#selection?.is_mobile) window.setTimeout(() => this.set_cursor(before.length + inside.length + end_offs), 1);
     if (force_linebreak) this.#selection?.discard();
     this.#update_markdown_render();
