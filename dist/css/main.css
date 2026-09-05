@@ -29,7 +29,7 @@
         --infill-nav-toggle-inactive-color: #009166;                    /* The inactive color of the markdown toggle */
 
         --infill-nav-button-color: #535353;                             /* The nav buttons background color */
-        --infill-nav-button-text-color: #aaa;                             /* The nav buttons background color */
+        --infill-nav-button-text-color: #aaa;                           /* The nav buttons background color */
         --infill-nav-button-hover-color: #606060;                       /* The hover color of the nav buttons */
         --infill-nav-button-hover-zoom: 1.05;                             /* The hover zoom factor of the nav buttons */
         --infill-nav-button-active-zoom: 1.075;                           /* The zoom factor of the nav buttons when clicked */
@@ -54,7 +54,7 @@
         --infill-code-border: 1px solid #515151;                        /* The border of a codeblock or code element */
         --infill-code-border-radius: 5px;                                 /* The border radius of a code or codeblock element */
 
-        --infill-link-color: #fff;                                   /* The default color of a link element */
+        --infill-link-color: #fff;                                      /* The default color of a link element */
         --infill-link-border: 2px solid rgba(134, 134, 245, 0);         /* The default border of a link element */
         --infill-link-hover-color: #fff;                                /* The hover color of a link element */
         --infill-link-hover-border: 2px solid rgb(134, 134, 245, 1);    /* The hover border of a link element */

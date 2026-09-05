@@ -5,11 +5,11 @@
         "typescript": "^5.9.3"
     },
     "scripts": {
-        "build": "npx tsup src/main.ts --format esm,cjs,iife --dts --clean --global-name Infill",
+        "build": "npx tsup src/main.ts",
         "demo": "cd ./demo && php -S localhost:8002"
     },
-    "name": "@theblackswitch/infill",
-    "version": "0.1.0",
+    "name": "infill",
+    "version": "0.0.1",
     "type": "module",
     "main": "./dist/main.ts",
     "types": "./dist/public_types.d.ts",
