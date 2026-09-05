@@ -29,7 +29,7 @@
         --infill-nav-button-active-zoom: 1.075;                          /* The zoom factor of the nav buttons when clicked */
         --infill-nav-button-border-radius: 0px;                          /* The border radius of the nav buttons */
 
-        --infill-editor-border-color: #0d0d0e;                          /* The color of the border around the editor*/
+        --infill-editor-border-color: #000000;                          /* The color of the border around the editor*/
         --infill-editor-background-color: #000000;                      /* The background color of the main editor box */
         --infill-editor-selection-color: #176B65;                       /* The color of the selection overlay when selecting text */
         --infill-editor-select-thumb-color: #35D8CC;                    /* Th color of the thumbs used to adjust selections on mobile */

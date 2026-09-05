@@ -5478,6 +5478,7 @@ var Editor = class {
     this.#text_display = document.createElement("div");
     this.#text_display.classList.add("infill-editor-display");
     this.#text_display.addEventListener("pointermove", (e) => this.#editor_mouse_move(e));
+    this.#text_display.addEventListener("scroll", (e) => this.#editor_scroll(e));
     this.#text_display.addEventListener("pointerdown", (e) => e.preventDefault());
     document.addEventListener("pointerdown", (e) => this.#editor_mouse_down(e));
     document.addEventListener("pointerup", (e) => this.#editor_mouse_up(e));
@@ -5544,35 +5545,56 @@ var Editor = class {
     let after = "";
     let inside = "";
     console.log(this.#selection);
+    let select_start = 0;
+    let select_end = 0;
     if (this.#selection !== null && this.#selection.visible) {
-      const start = this.#map_cursor_pos(this.#selection.lo);
-      const end = this.#map_cursor_pos(this.#selection.hi);
-      before = this.#input.value.slice(0, start);
-      inside = this.#input.value.slice(start, end);
-      after = this.#input.value.slice(end);
+      select_start = this.#map_cursor_pos(this.#selection.lo);
+      select_end = this.#map_cursor_pos(this.#selection.hi);
+      if (select_end === void 0 || select_start === void 0) return;
+      before = this.#input.value.slice(0, select_start);
+      inside = this.#input.value.slice(select_start, select_end);
+      after = this.#input.value.slice(select_end);
     } else {
       const cursor_pos = this.#input.selectionStart;
       before = this.#input.value.slice(0, cursor_pos);
       after = this.#input.value.slice(cursor_pos);
     }
     console.log("TEST", before, after);
-    if (before.endsWith(before_cursor) && after.startsWith(after_cursor)) {
-      before = before.slice(0, before.length - before_cursor.length);
-      after = after.slice(after_cursor.length);
-      console.log("AFTER_REPLACE", before, after);
-      this.#input.value = before + inside + after;
+    const should_remove_start = before.endsWith(before_cursor) || inside.startsWith(before_cursor);
+    const should_remove_end = after.startsWith(after_cursor) || inside.endsWith(after_cursor);
+    if (should_remove_start) {
+      if (before.endsWith(before_cursor)) {
+        before = before.slice(0, before.length - before_cursor.length);
+      } else {
+        inside = inside.slice(before_cursor.length);
+      }
     } else {
       if (force_linebreak && before[before.length - 1] !== "\n" && before.length > 0) {
         before += "\n";
       }
       before += before_cursor;
-      after = after_cursor + after;
-      this.#input.value = before + inside + after;
     }
-    if (!this.#selection?.is_mobile) window.setTimeout(() => this.set_cursor(before.length + inside.length), 1);
+    if (should_remove_end) {
+      if (after.startsWith(after_cursor)) {
+        after = after.slice(after_cursor.length);
+      } else {
+        inside = inside.slice(0, inside.length - after_cursor.length);
+      }
+    } else {
+      after = after_cursor + after;
+    }
+    this.#input.value = before + inside + after;
+    const end_offs = should_remove_end || this.#selection !== null && this.#selection.visible ? 0 : after_cursor.length;
+    if (!this.#selection?.is_mobile) window.setTimeout(() => this.set_cursor(before.length + inside.length + end_offs), 1);
     if (force_linebreak) this.#selection?.discard();
     this.#update_markdown_render();
-    if (this.#selection !== null && this.#selection.visible) this.#selection.update_render();
+    if (this.#selection !== null && this.#selection.visible) {
+      const new_start = this.#inverse_map_cursor_pos(before.length);
+      const new_end = this.#inverse_map_cursor_pos(before.length + inside.length + (should_remove_end ? 0 : after_cursor.length));
+      this.#selection.set_start(new_start);
+      this.#selection.set_end(new_end);
+      this.#selection.update_render();
+    }
     this.#register_history_state();
   }
   // -------------------------------
@@ -5604,6 +5626,7 @@ var Editor = class {
     } else {
       this.#wrapper.classList.add("infill-parsing-disabled");
       if (this.#editor_had_focus) this.#input.focus();
+      if (this.#selection !== null) this.#selection.discard();
     }
   }
   // ==========================================================================================================================================
@@ -5645,6 +5668,10 @@ var Editor = class {
       "block": "nearest",
       "inline": "center"
     });
+  }
+  #editor_scroll(e) {
+    if (this.#selection !== null && this.#selection.visible) this.#selection.update_render();
+    console.log("HELLO");
   }
   // ==========================================================================================================================================
   // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -5727,11 +5754,14 @@ var Editor = class {
   #before_input(e) {
     const key = e.data;
     if (key?.length === 1) {
-      if (" -".includes(key)) {
+      if (" -\n".includes(key)) {
         window.setTimeout(() => this.#register_history_state(true, true), 10);
       } else {
         window.setTimeout(() => this.#register_history_state(true), 10);
       }
+    }
+    if (key === null) {
+      window.setTimeout(() => this.#register_history_state(true, true), 10);
     }
   }
   // ==========================================================================================================================================
@@ -5798,7 +5828,11 @@ var Editor = class {
     if (!this.#toggle_check.checked) return;
     if (this.#mouse_down && e.pointerType === "mouse" && this.#input.value.length > 0) {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-      if (cursor !== void 0) this.#selection?.set_end(cursor);
+      if (cursor !== void 0) {
+        const mapped = this.#map_cursor_pos(cursor);
+        if (mapped !== void 0) this.set_cursor(mapped);
+        this.#selection?.set_end(cursor);
+      }
     }
     if (this.#mouse_down && (this.#selection === null || !this.#selection.visible)) {
       let start_x = this.#anchor_pos[0];
@@ -6362,6 +6396,7 @@ var Editor = class {
     if (!this.#toggle_check.checked && !force_enabled) return;
     e.preventDefault();
     e.stopPropagation();
+    if (this.#selection !== null) this.#selection.discard();
     if (this.#history.undo_states.length < 2) return;
     const states = this.#history.undo_states;
     const prev_state = this.#history.undo_states.pop();

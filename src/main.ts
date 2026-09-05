@@ -287,6 +287,7 @@ export class Editor {
         this.#text_display = document.createElement('div');
         this.#text_display.classList.add('infill-editor-display');
         this.#text_display.addEventListener('pointermove', (e) => this.#editor_mouse_move(e));
+        this.#text_display.addEventListener('scroll', (e) => this.#editor_scroll(e));
 
         // Stop mobile losing focus of the text area
         this.#text_display.addEventListener('pointerdown', e => e.preventDefault());
@@ -366,7 +367,7 @@ export class Editor {
 
         parent_element.appendChild(btn);
         btn.addEventListener('click', (e) => {
-            on_click(e)
+            on_click(e);
         });
     }
 
@@ -384,13 +385,19 @@ export class Editor {
 
         console.log(this.#selection);
         
-        if(this.#selection !== null && this.#selection.visible) {
-            const start = this.#map_cursor_pos(this.#selection.lo);
-            const end = this.#map_cursor_pos(this.#selection.hi);
+        // Split the text into parts depending on the cursor / selection
+        let select_start: number | undefined = 0;
+        let select_end: number | undefined = 0;
 
-            before = this.#input.value.slice(0, start);
-            inside = this.#input.value.slice(start, end);
-            after = this.#input.value.slice(end);
+        if(this.#selection !== null && this.#selection.visible) {
+            select_start = this.#map_cursor_pos(this.#selection.lo);
+            select_end = this.#map_cursor_pos(this.#selection.hi);
+
+            if(select_end === undefined || select_start === undefined) return;
+
+            before = this.#input.value.slice(0, select_start);
+            inside = this.#input.value.slice(select_start, select_end);
+            after = this.#input.value.slice(select_end);
             
         } else {
             const cursor_pos = this.#input.selectionStart;
@@ -400,29 +407,58 @@ export class Editor {
 
         console.log("TEST", before, after);
 
-        if(before.endsWith(before_cursor) && after.startsWith(after_cursor)) {
-            before = before.slice(0, before.length - before_cursor.length);
-            after = after.slice(after_cursor.length);
+        // Remove the styling instead of doubling it
+        const should_remove_start = before.endsWith(before_cursor) || inside.startsWith(before_cursor);
+        const should_remove_end = after.startsWith(after_cursor) || inside.endsWith(after_cursor);
 
-            console.log("AFTER_REPLACE", before, after);
+        // Start
+        if(should_remove_start) {
+            if(before.endsWith(before_cursor)) {
+                before = before.slice(0, before.length - before_cursor.length);
+            } else {
+                inside = inside.slice(before_cursor.length);
+            }    
 
-            this.#input.value = before + inside + after;    
+        // Otherwise we just add the styling like usual
         } else {
             if(force_linebreak && before[before.length - 1] !== "\n" && before.length > 0) {
                 before += "\n";
             }
-
             before += before_cursor;
+        }
+        
+        // End
+        if(should_remove_end) {
+            if(after.startsWith(after_cursor)) {
+                after = after.slice(after_cursor.length);
+            } else {
+                inside = inside.slice(0, inside.length - after_cursor.length);
+            }
+                    
+        // Otherwise we just add the styling like usual
+        } else {
             after = after_cursor + after;
-
-            this.#input.value = before + inside + after;
         }
 
-        if(!this.#selection?.is_mobile) window.setTimeout(() => this.set_cursor(before.length + inside.length), 1);
+        this.#input.value = before + inside + after;
+
+        // Only move the cursor to the end of everything when selecting
+        const end_offs = (should_remove_end || (this.#selection !== null && this.#selection.visible) ? 0 : after_cursor.length);
+
+        if(!this.#selection?.is_mobile) window.setTimeout(() => this.set_cursor(before.length + inside.length + end_offs), 1);
         if(force_linebreak) this.#selection?.discard();
 
         this.#update_markdown_render();
-        if(this.#selection !== null && this.#selection.visible) this.#selection.update_render();
+
+        // Update the selection according to the inserted text and the updated markdown render
+        if(this.#selection !== null && this.#selection.visible) {
+            const new_start = this.#inverse_map_cursor_pos(before.length);
+            const new_end = this.#inverse_map_cursor_pos(before.length + inside.length + (should_remove_end ? 0 : after_cursor.length));
+            this.#selection.set_start(new_start);
+            this.#selection.set_end(new_end);
+            this.#selection.update_render();
+        }
+
         this.#register_history_state();
     }
 
@@ -467,6 +503,7 @@ export class Editor {
         } else {
             this.#wrapper.classList.add('infill-parsing-disabled');
             if(this.#editor_had_focus) this.#input.focus();
+            if(this.#selection !== null) this.#selection.discard();
         }
     }
 
@@ -532,6 +569,11 @@ export class Editor {
         });
 
         
+    }
+
+    #editor_scroll(e: Event) {
+        if(this.#selection !== null && this.#selection.visible) this.#selection.update_render();
+        console.log('HELLO');
     }
 
     // ==========================================================================================================================================
@@ -667,11 +709,15 @@ export class Editor {
     #before_input(e: InputEvent) {
         const key = e.data
         if(key?.length === 1) {
-            if(" -".includes(key)) {
+            if(" -\n".includes(key)) {
                 window.setTimeout(() => this.#register_history_state(true, true), 10);
             } else {
                 window.setTimeout(() => this.#register_history_state(true), 10);
             }
+        }
+
+        if(key === null) {
+            window.setTimeout(() => this.#register_history_state(true, true), 10);
         }
     }
 
@@ -765,7 +811,11 @@ export class Editor {
         // Update the selection
         if(this.#mouse_down && e.pointerType === "mouse" && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) {
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-            if(cursor !== undefined) this.#selection?.set_end(cursor);
+            if(cursor !== undefined) {
+                const mapped = this.#map_cursor_pos(cursor);
+                if(mapped !== undefined) this.set_cursor(mapped)
+                this.#selection?.set_end(cursor);
+            }
         }
 
         // Detect if the mouse should start selecting by calculating the position from the anchor
@@ -825,7 +875,7 @@ export class Editor {
         }
         this.#mouse_down = false;
     }
-    
+
     // -------------------------------
     //  Create mobile selection                            
     // -------------------------------
@@ -1569,6 +1619,7 @@ export class Editor {
         if(!this.#toggle_check.checked && !force_enabled) return;
         e.preventDefault();
         e.stopPropagation();
+        if(this.#selection !== null) this.#selection.discard();
 
         if(this.#history.undo_states.length < 2) return;
 

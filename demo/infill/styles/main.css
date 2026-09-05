@@ -563,6 +563,10 @@
     display: none;
 }
 
+.infill-parsing-disabled .infill-editor-selection-mask {
+    display: none;
+}
+
 .infill-parsing-disabled .infill-editor-input {
     border-left: 4px solid var(--infill-editor-border-color);
     border-right: 4px solid var(--infill-editor-border-color);
@@ -641,6 +645,7 @@
     left: 0px;
     user-select: none;
     pointer-events: none;
+    overflow: hidden;
 }
 
 
