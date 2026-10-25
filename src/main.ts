@@ -13,7 +13,19 @@
 
 import './utils';
 import type { absolute_map, options } from "./public_types";
-import * as YAMP from "@theblackswitch/yamp";
+
+import { 
+    YAMP, Header, 
+    AlternateHeader, BlockQuote, 
+    Code, CodeBlock, 
+    Color, Emphasis, 
+    Strikethrough, UnderscoreEmphasis, 
+    Highlight, Underlined, 
+    HorizontalRule, Image, 
+    Link, List, 
+    Table, EscapeIncompleteHtml 
+} from "@theblackswitch/yamp";
+
 import './prismjs_highlight/mcfunction';
 import DOMPurify from 'dompurify'
 import { cursor_pos_from_point, download_file, touch_only } from './utils';
@@ -25,6 +37,12 @@ interface history_item {
     input_value: string,
     cursor_pos: number,
     is_character_change: boolean
+}
+
+interface registered_event_listener {
+    targ: EventTarget,
+    type: string,
+    listener: EventListenerOrEventListenerObject
 }
 
 // ==========================================================================================================================================
@@ -54,28 +72,30 @@ export const default_options: options = {
         "import": true        
     },
     "enabled_features": [
-        YAMP.Header,
-        YAMP.AlternateHeader,
-        YAMP.BlockQuote,
-        YAMP.Code,
-        YAMP.CodeBlock,
-        YAMP.Color,
-        YAMP.Emphasis,
-        YAMP.Strikethrough,
-        YAMP.UnderscoreEmphasis,
-        YAMP.Highlight,
-        YAMP.Underlined,
-        YAMP.HorizontalRule,
-        YAMP.Image,
-        YAMP.Link,
-        YAMP.List,
-        YAMP.Table,
-        YAMP.EscapeIncompleteHtml
+        Header,
+        BlockQuote,
+        Code,
+        CodeBlock,
+        Color,
+        Emphasis,
+        Strikethrough,
+        UnderscoreEmphasis,
+        Highlight,
+        Underlined,
+        HorizontalRule,
+        Image,
+        Link,
+        List,
+        Table,
+        EscapeIncompleteHtml
     ],
     "keyboard_shortcuts_enabled": true
 }
 
 export class Editor {
+    
+    #parser: YAMP;
+
     #parent_element: HTMLElement;
     #options: options;
     #place_holder: string;
@@ -92,13 +112,19 @@ export class Editor {
     #slider: HTMLInputElement;
     #toggle_check: HTMLInputElement;
 
+    #resize_observer: ResizeObserver;
+
     #width: string;
     #height: string;
+
+    #destroyed: boolean = false;
 
     #history: {undo_states: Array<history_item>, redo_states: Array<history_item>} = {
         "undo_states": [],
         "redo_states": []
     }
+
+    #registered_event_listeners: Array<registered_event_listener> = [];
 
     // ==========================================================================================================================================
     // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -135,20 +161,14 @@ export class Editor {
             }
         }
 
-        YAMP.set_options({
+        this.#parser = new YAMP({
             "enabled_features": this.#options.enabled_features,
             "add_zero_width_space_for_cursor_positions": true,
             "disable_paragraph_elements": false,
             "enable_trailing_linebreaks": true,
             "finalize_spaces": true,
             "literal_mid_word_underscores": true
-        })
-
-        // -------------------------------
-        //  Create a worker for the parse                            
-        // -------------------------------
-
-        //this.#parse_worker = new Worker(new URL("./workers/parse.ts", import.meta.url), { type: "module" });
+        });
 
         // -------------------------------
         //  Construct HTML                            
@@ -163,7 +183,7 @@ export class Editor {
         this.#wrapper.style.width = width;
         this.#wrapper.style.height = height;
 
-        const resizeObserver = new ResizeObserver((entries) => {
+        this.#resize_observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (!entry.contentBoxSize) return;
                 const contentBoxSize = entry.contentBoxSize[0];
@@ -175,7 +195,7 @@ export class Editor {
                 }
             }
         });
-        resizeObserver.observe(this.#wrapper);
+        this.#resize_observer.observe(this.#wrapper);
 
         // ======= TOP NAV =======
         this.#nav = document.createElement('div');
@@ -191,13 +211,13 @@ export class Editor {
         block_1.classList.add('infill-editor-nav-block');
         button_wrapper.appendChild(block_1);
 
-        if(this.#options.nav?.header) this.#gen_btn(block_1, () => this.#insert_text("# ", "", true), "H1", `Heading 1 ${this.#options.keyboard_shortcuts_enabled ? "| CTRL H" : ""}`, 'infill-align-right');
-        if(this.#options.nav?.header) this.#gen_btn(block_1, () => this.#insert_text("## ", "", true), "H2", "Heading 2", 'infill-align-right');
-        if(this.#options.nav?.header) this.#gen_btn(block_1, () => this.#insert_text("### ", "", true), "H3", "Heading 3");
+        if(this.#options.nav?.header) this.#gen_btn(block_1, this.#on_header_1, "H1", `Heading 1 ${this.#options.keyboard_shortcuts_enabled ? "| CTRL H" : ""}`, 'infill-align-right');
+        if(this.#options.nav?.header) this.#gen_btn(block_1, this.#on_header_2, "H2", "Heading 2", 'infill-align-right');
+        if(this.#options.nav?.header) this.#gen_btn(block_1, this.#on_header_3, "H3", "Heading 3");
 
-        if(this.#options.nav?.blockquote) this.#gen_btn(block_1, () => this.#insert_text("> ", "", true), '<i class="infill-icon infill-icon-blockquote"></i>', `Blockquote ${this.#options.keyboard_shortcuts_enabled ? "| CTRL Q" : ""}`);
-        if(this.#options.nav?.code_block) this.#gen_btn(block_1, () => this.#insert_text("```", "\n```", true), '<i class="infill-icon infill-icon-codeblock"></i>', `Codeblock  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL E" : ""}`);
-        if(this.#options.nav?.code) this.#gen_btn(block_1, () => this.#insert_text("``", "``", false), '<i class="infill-icon infill-icon-code"></i>', `Code  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL T" : ""}`);
+        if(this.#options.nav?.blockquote) this.#gen_btn(block_1, this.#on_block_quote, '<i class="infill-icon infill-icon-blockquote"></i>', `Blockquote ${this.#options.keyboard_shortcuts_enabled ? "| CTRL Q" : ""}`);
+        if(this.#options.nav?.code_block) this.#gen_btn(block_1, this.#on_code_block, '<i class="infill-icon infill-icon-codeblock"></i>', `Codeblock  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL E" : ""}`);
+        if(this.#options.nav?.code) this.#gen_btn(block_1, this.#on_code, '<i class="infill-icon infill-icon-code"></i>', `Code  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL T" : ""}`);
 
         // Bold, italic, strikethrough, highlight, underline, colored
         let sep_1 = document.createElement('div');
@@ -208,10 +228,10 @@ export class Editor {
         block_2.classList.add('infill-editor-nav-block');
         button_wrapper.appendChild(block_2);
 
-        if(this.#options.nav?.list) this.#gen_btn(block_2, () => this.#insert_text("- ", "", true), '<i class="infill-icon infill-icon-unordered-list"></i>', `Unordered list ${this.#options.keyboard_shortcuts_enabled ? "| CTRL L" : ""}`);
-        if(this.#options.nav?.link) this.#gen_btn(block_2, () => this.#insert_text("1. ", "", true), '<i class="infill-icon infill-icon-ordered-list"></i>', `Ordered list | ${this.#options.keyboard_shortcuts_enabled ? "| CTRL O" : ""}`);
-        if(this.#options.nav?.link) this.#gen_btn(block_2, () => this.#insert_text("[", "]()", false), '<i class="infill-icon infill-icon-link"></i>', `Link ${this.#options.keyboard_shortcuts_enabled ? "| CTRL K" : ""}`);
-        if(this.#options.nav?.image) this.#gen_btn(block_2, () => this.#insert_text("![]()", "", false), '<i class="infill-icon infill-icon-image"></i>', `Picture ${this.#options.keyboard_shortcuts_enabled ? "| CTRL P" : ""}`);
+        if(this.#options.nav?.list) this.#gen_btn(block_2, this.#on_unordered_list, '<i class="infill-icon infill-icon-unordered-list"></i>', `Unordered list ${this.#options.keyboard_shortcuts_enabled ? "| CTRL L" : ""}`);
+        if(this.#options.nav?.list) this.#gen_btn(block_2, this.#on_ordered_list, '<i class="infill-icon infill-icon-ordered-list"></i>', `Ordered list | ${this.#options.keyboard_shortcuts_enabled ? "| CTRL O" : ""}`);
+        if(this.#options.nav?.link) this.#gen_btn(block_2, this.#on_link, '<i class="infill-icon infill-icon-link"></i>', `Link ${this.#options.keyboard_shortcuts_enabled ? "| CTRL K" : ""}`);
+        if(this.#options.nav?.image) this.#gen_btn(block_2, this.#on_image, '<i class="infill-icon infill-icon-image"></i>', `Picture ${this.#options.keyboard_shortcuts_enabled ? "| CTRL P" : ""}`);
 
         // Lists, links, images
         let sep_2 = document.createElement('div');
@@ -222,12 +242,12 @@ export class Editor {
         block_3.classList.add('infill-editor-nav-block');
         button_wrapper.appendChild(block_3);
 
-        if(this.#options.nav?.bold) this.#gen_btn(block_3, () => this.#insert_text("**", "**", false), '<strong>B</strong>', `Bold Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL B" : ""}`);
-        if(this.#options.nav?.italic) this.#gen_btn(block_3, () => this.#insert_text("_", "_", false), '<em>I</em>', `Italic Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL I" : ""}`);
-        if(this.#options.nav?.strikethrough) this.#gen_btn(block_3, () => this.#insert_text("~~", "~~", false), '<s>S</s>', `Strikethrough Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL S" : ""}`);
-        if(this.#options.nav?.underline) this.#gen_btn(block_3, () => this.#insert_text("==", "==", false), '<u>U</u>', `Underline Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL U" : ""}`);
-        if(this.#options.nav?.highlight) this.#gen_btn(block_3, () => this.#insert_text("^", "^", false), '<mark>H</mark>', `Marked Text ${this.#options.keyboard_shortcuts_enabled ? "| CTRL M" : ""}`);
-        if(this.#options.nav?.coloured) this.#gen_btn(block_3, () => this.#insert_text("[|", "]", false), '<i class="infill-icon infill-icon-coloured"></i>', `Dyed Text ${this.#options.keyboard_shortcuts_enabled ? "| CTRL D" : ""}`);
+        if(this.#options.nav?.bold) this.#gen_btn(block_3, this.#on_bold, '<strong>B</strong>', `Bold Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL B" : ""}`);
+        if(this.#options.nav?.italic) this.#gen_btn(block_3, this.#on_italic, '<em>I</em>', `Italic Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL I" : ""}`);
+        if(this.#options.nav?.strikethrough) this.#gen_btn(block_3, this.#on_strikethrough, '<s>S</s>', `Strikethrough Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL S" : ""}`);
+        if(this.#options.nav?.underline) this.#gen_btn(block_3, this.#on_underline, '<u>U</u>', `Underline Text  ${this.#options.keyboard_shortcuts_enabled ? "| CTRL U" : ""}`);
+        if(this.#options.nav?.highlight) this.#gen_btn(block_3, this.#on_highlight, '<mark>H</mark>', `Marked Text ${this.#options.keyboard_shortcuts_enabled ? "| CTRL M" : ""}`);
+        if(this.#options.nav?.coloured) this.#gen_btn(block_3, this.#on_coloured, '<i class="infill-icon infill-icon-coloured"></i>', `Dyed Text ${this.#options.keyboard_shortcuts_enabled ? "| CTRL D" : ""}`);
 
         // Lists, links, images
         let sep_3 = document.createElement('div');
@@ -250,7 +270,10 @@ export class Editor {
         this.#slider.setAttribute('min', '0');
         this.#slider.setAttribute('max', '100');
         this.#slider.classList.add('infill-slider');
-        this.#slider.addEventListener('input', () => this.#slider_change());
+
+        this.#register_event_listener(this.#slider, 'input',  this.#slider_change);
+        
+        
         slider_wrapper.appendChild(this.#slider);
 
         this.#nav.appendChild(slider_wrapper);
@@ -264,8 +287,10 @@ export class Editor {
         this.#toggle_check.setAttribute('type', 'checkbox');
         this.#toggle_check.setAttribute('checked', '');
         this.#toggle_check.classList.add('infill-toggle-check');
-        this.#toggle_check.addEventListener('click', () => window.setTimeout(() => this.#click_toggle(), 100));
-        this.#toggle_check.addEventListener('pointerdown', () => this.#register_focus());
+
+        this.#register_event_listener(this.#toggle_check, 'click',  this.#click_toggle);
+        this.#register_event_listener(this.#toggle_check, 'pointerdown',  this.#register_focus);
+
         toggle_wrapper.appendChild(this.#toggle_check);
 
         let toggle_gutter = document.createElement('div');
@@ -284,23 +309,25 @@ export class Editor {
         this.#input = document.createElement('textarea');
         this.#input.classList.add('infill-editor-input');
         this.#input.setAttribute('name', 'infill-editor-input');
-        this.#input.addEventListener("beforeinput", (e) => this.#before_input(e));
-        this.#input.addEventListener("input", () => this.#update_markdown_render());
-        this.#input.addEventListener('blur', () => this.#update_markdown_render());
+
+        this.#register_event_listener(this.#input, "beforeinput",  this.#before_input);
+        this.#register_event_listener(this.#input, "input",  () => this.#update_markdown_render(true));
+        this.#register_event_listener(this.#input, 'blur',  () => this.#update_markdown_render());
+
         this.#editor.appendChild(this.#input);
 
         this.#text_display = document.createElement('div');
         this.#text_display.classList.add('infill-editor-display');
-        this.#text_display.addEventListener('pointermove', (e) => this.#editor_mouse_move(e));
-        this.#text_display.addEventListener('scroll', (e) => this.#editor_scroll(e));
+        this.#register_event_listener(this.#text_display, 'pointermove',  this.#editor_mouse_move);
+        this.#register_event_listener(this.#text_display, 'scroll',  this.#editor_scroll);
 
         // Stop mobile losing focus of the text area
-        this.#text_display.addEventListener('pointerdown', e => e.preventDefault());
+        this.#register_event_listener(this.#text_display, 'pointerdown',  this.#prevent_focus_loss);
 
-        document.addEventListener('pointerdown', (e) => this.#editor_mouse_down(e));
-        document.addEventListener('pointerup', (e) => this.#editor_mouse_up(e));
-        document.addEventListener('pointermove', (e) => this.#selection_thumb_move(e));
-        document.addEventListener('scroll', () => this.#cancel_hold());
+        this.#register_event_listener(document, 'pointerdown',  this.#editor_mouse_down);
+        this.#register_event_listener(document, 'pointerup',  this.#editor_mouse_up);
+        this.#register_event_listener(document, 'pointermove',  this.#selection_thumb_move);
+        this.#register_event_listener(document, 'scroll',  this.#cancel_hold);
         this.#editor.appendChild(this.#text_display);
 
         this.#selection_mask = document.createElement('div');
@@ -308,10 +335,10 @@ export class Editor {
         this.#editor.appendChild(this.#selection_mask);
 
         // Events
-        document.addEventListener('keydown', (e) => this.#on_key_down(e));
-        document.addEventListener('paste', (e: ClipboardEvent) => this.#paste_selection(e));
-        document.addEventListener('copy', (e: ClipboardEvent) => this.#copy_selection(e));
-        document.addEventListener('cut', (e: ClipboardEvent) => this.#cut_selection(e));
+        this.#register_event_listener(document, 'keydown',  this.#on_key_down);
+        this.#register_event_listener<ClipboardEvent>(document, 'paste',  this.#paste_selection);
+        this.#register_event_listener<ClipboardEvent>(document, 'copy',  this.#copy_selection);
+        this.#register_event_listener<ClipboardEvent>(document, 'cut',  this.#cut_selection);
         
         // ======= BOTTOM NAV =======
         this.#bott_nav = document.createElement('div');
@@ -323,16 +350,16 @@ export class Editor {
         this.#bott_nav_left.classList.add('infill-editor-bottom-nav-left');
         this.#bott_nav.appendChild(this.#bott_nav_left);
 
-        this.#gen_btn(this.#bott_nav_left, (e: KeyboardEvent) => this.#copy_selection(navigator.clipboard), '<i class="infill-icon infill-icon-copy"></i>', 'Copy | CTRL + C');
-        this.#gen_btn(this.#bott_nav_left, (e: KeyboardEvent) => this.#paste_selection(navigator.clipboard), '<i class="infill-icon infill-icon-paste"></i>', 'Paste | CTRL + V');
-        this.#gen_btn(this.#bott_nav_left, (e: KeyboardEvent) => this.#cut_selection(navigator.clipboard), '<i class="infill-icon infill-icon-cut"></i>', 'Cut | CTRL + X');
+        this.#gen_btn(this.#bott_nav_left, this.#on_copy_selection, '<i class="infill-icon infill-icon-copy"></i>', 'Copy | CTRL + C');
+        this.#gen_btn(this.#bott_nav_left, this.#on_paste_selection, '<i class="infill-icon infill-icon-paste"></i>', 'Paste | CTRL + V');
+        this.#gen_btn(this.#bott_nav_left, this.#on_cut_selection, '<i class="infill-icon infill-icon-cut"></i>', 'Cut | CTRL + X');
 
         let sep_4 = document.createElement('div');
         sep_4.classList.add('infill-editor-nav-separator');
         this.#bott_nav_left.appendChild(sep_4);
 
-        this.#gen_btn(this.#bott_nav_left, (e: KeyboardEvent) => this.set_cursor(Math.max(0, this.#input.selectionStart - 1)), '<i class="infill-icon infill-icon-arrow-left"></i>', 'Move cursor left | Left Arrow');
-        this.#gen_btn(this.#bott_nav_left, (e: KeyboardEvent) => this.set_cursor(Math.min(this.#input.value.length, this.#input.selectionStart + 1)), '<i class="infill-icon infill-icon-arrow-right"></i>', 'Move cursor right | Right Arrow');
+        this.#gen_btn(this.#bott_nav_left, this.#on_left, '<i class="infill-icon infill-icon-arrow-left"></i>', 'Move cursor left | Left Arrow');
+        this.#gen_btn(this.#bott_nav_left, this.#on_right, '<i class="infill-icon infill-icon-arrow-right"></i>', 'Move cursor right | Right Arrow');
 
 
         // Right aligned
@@ -340,42 +367,153 @@ export class Editor {
         this.#bott_nav_right.classList.add('infill-editor-bottom-nav-right');
         this.#bott_nav.appendChild(this.#bott_nav_right);
 
-        this.#gen_btn(this.#bott_nav_right, (e: KeyboardEvent) => this.#undo(e, true), '<i class="infill-icon infill-icon-undo"></i>', 'Undo');
-        this.#gen_btn(this.#bott_nav_right, (e: KeyboardEvent) => this.#redo(e, true), '<i class="infill-icon infill-icon-redo"></i>', 'Redo');
+        this.#gen_btn(this.#bott_nav_right, this.#on_undo, '<i class="infill-icon infill-icon-undo"></i>', 'Undo');
+        this.#gen_btn(this.#bott_nav_right, this.#on_redo, '<i class="infill-icon infill-icon-redo"></i>', 'Redo');
 
         let sep_5 = document.createElement('div');
         sep_5.classList.add('infill-editor-nav-separator');
         this.#bott_nav_right.appendChild(sep_5);
 
-        this.#gen_btn(this.#bott_nav_right, () => this.#export_file(), '<i class="infill-icon infill-icon-export"></i>', 'Export File');
-        this.#gen_btn(this.#bott_nav_right, () => this.#import_file(), '<i class="infill-icon infill-icon-import"></i>', 'Open File');
+        this.#gen_btn(this.#bott_nav_right, this.#export_file, '<i class="infill-icon infill-icon-export"></i>', 'Export File');
+        this.#gen_btn(this.#bott_nav_right, this.#import_file, '<i class="infill-icon infill-icon-import"></i>', 'Open File');
 
         this.#register_history_state();
 
-        this.#update_markdown_render();
+        this.#register_event_listener(window, 'pageshow', () => this.#update_markdown_render());
     }
+
+    #register_event_listener<E extends Event>(target: EventTarget, type: string, listener: (event: E) => void) {
+        const handler: EventListener = (e: Event) => {
+            listener(e as E);
+        }
+        
+        target.addEventListener(type, handler);
+        this.#registered_event_listeners.push({
+            "targ": target,
+            "type": type,
+            "listener": handler
+        })
+    }
+
+    // ==========================================================================================================================================
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    //                                                                BUTTONS                                                                       
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // ==========================================================================================================================================
 
     // -------------------------------
     //  Generate the html for a btn                            
     // -------------------------------
 
-    #gen_btn(parent_element: Element, on_click: Function, inner: string, tooltip: string, ...css_classes: Array<string>) {
+    #gen_btn(parent_element: Element, on_click: EventListener, inner: string, tooltip: string, ...css_classes: Array<string>) {
         let btn = document.createElement('div');
         btn.innerHTML = inner;
         btn.setAttribute('data-infill-tooltip', tooltip);
         btn.classList.add('infill-nav-btn', 'infill-tooltip', ...css_classes);
 
         // Stop mobile losing focus of the text area
-        btn.addEventListener('pointerdown', e => {
-            e.preventDefault();
-        });
+        this.#register_event_listener(btn, 'pointerdown',  this.#prevent_focus_loss);
 
         parent_element.appendChild(btn);
-        btn.addEventListener('click', (e) => {
-            on_click(e);
-        });
+        this.#register_event_listener<Event>(btn, 'click',  on_click);
     }
 
+    // -------------------------------
+    //  Button handlers                            
+    // -------------------------------
+
+    #on_header_1 = () => {
+        this.#insert_text("# ", "", true);
+    }
+
+    #on_header_2 = () => {
+        this.#insert_text("## ", "", true);
+    }
+
+    #on_header_3 = () => {
+        this.#insert_text("### ", "", true);
+    }
+
+    #on_block_quote = () => {
+        this.#insert_text("> ", "", true);
+    }
+
+    #on_code_block = () => {
+        this.#insert_text("```", "\n```", true);
+    }
+
+    #on_code = () => {
+        this.#insert_text("``", "``", false);
+    }
+
+    #on_unordered_list = () => {
+        this.#insert_text("- ", "", true);
+    }
+
+    #on_ordered_list = () => {
+        this.#insert_text("1. ", "", true);
+    }
+
+    #on_link = () => {
+        this.#insert_text("[", "]()", false);
+    }
+
+    #on_image = () => {
+        this.#insert_text("![]()", "", false);
+    }
+
+    #on_bold = () => {
+        this.#insert_text("**", "**", false);
+    }
+
+    #on_italic = () => {
+        this.#insert_text("_", "_", false);
+    }
+
+    #on_strikethrough = () => {
+        this.#insert_text("~~", "~~", false);
+    }
+
+    #on_underline = () => {
+        this.#insert_text("==", "==", false);
+    }
+
+    #on_highlight = () => {
+        this.#insert_text("^", "^", false);
+    }
+
+    #on_coloured = () => {
+        this.#insert_text("[|", "]", false);
+    }
+
+    #on_copy_selection = () => {
+        this.#copy_selection(navigator.clipboard);
+    }
+
+    #on_paste_selection = () => {
+        this.#paste_selection(navigator.clipboard);
+    }
+
+    #on_cut_selection = () => {
+        this.#cut_selection(navigator.clipboard);
+    }
+
+    #on_left = () => {
+        this.set_cursor(Math.max(0, this.#input.selectionStart - 1))
+    }
+
+    #on_right = () => {
+        this.set_cursor(Math.min(this.#input.value.length, this.#input.selectionStart + 1))
+    }
+
+    #on_undo = (e: Event) => {
+        this.#undo(e, true)
+    }
+
+    #on_redo = (e: Event) => {
+        this.#redo(e, true)
+    }
+    
     // ==========================================================================================================================================
     // ------------------------------------------------------------------------------------------------------------------------------------------
     //                                                            TOP NAVIGATION                                                           
@@ -471,7 +609,7 @@ export class Editor {
     //  Slider                            
     // -------------------------------
 
-    #slider_change() {
+    #slider_change = () => {
         let scale = 1.0;
 
         const slider_value = Number(this.#slider.value);
@@ -492,24 +630,27 @@ export class Editor {
     #editor_had_focus: boolean = false;
 
     // Register if the editor is focused just before it will lose focus due to clicking on the toggle
-    #register_focus() {
+    #register_focus= () => {
         this.#editor_had_focus = document.activeElement === this.#input;
     }
 
-    #click_toggle() {
-        const enabled = this.#toggle_check.checked;
+    #click_toggle = () => {
+        // Toggle the check a little later to match the animation
+        window.setTimeout(() => {
+            const enabled = this.#toggle_check.checked;
 
-        console.log('CHECK');
+            console.log('CHECK');
 
-        if(enabled) {
-            this.#wrapper.classList.remove('infill-parsing-disabled');
-            window.setTimeout(() => this.set_cursor(this.#input.selectionStart, !this.#editor_had_focus), 10);
-            this.#update_markdown_render();
-        } else {
-            this.#wrapper.classList.add('infill-parsing-disabled');
-            if(this.#editor_had_focus) this.#input.focus();
-            if(this.#selection !== null) this.#selection.discard();
-        }
+            if(enabled) {
+                this.#wrapper.classList.remove('infill-parsing-disabled');
+                window.setTimeout(() => this.set_cursor(this.#input.selectionStart, !this.#editor_had_focus), 10);
+                this.#update_markdown_render();
+            } else {
+                this.#wrapper.classList.add('infill-parsing-disabled');
+                if(this.#editor_had_focus) this.#input.focus();
+                if(this.#selection !== null) this.#selection.discard();
+            }
+        }, 100)
     }
 
     // ==========================================================================================================================================
@@ -532,7 +673,7 @@ export class Editor {
         }
     };
 
-    #update_markdown_render() {
+    #update_markdown_render = (scroll_into_view: boolean = false) => {
         let markdown_input = this.#input.value;
 
         if(! this.#toggle_check.checked) return;
@@ -548,7 +689,7 @@ export class Editor {
         // Parse markdown
         console.log(markdown_input);
 
-        this.#last_parse = YAMP.parse(markdown_input);
+        this.#last_parse = this.#parser.parse(markdown_input);
 
         // Please say this never happens
         if(this.#last_parse.html === undefined) throw Error("[Infill]: whoops something went horribly wrong whilst parsing markdown. Please make an issue on github immediately.");
@@ -567,7 +708,7 @@ export class Editor {
         // Replace the cursor character with an actual element
         this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll('\uE003','<i class="infill-editor-cursor"></i>');
 
-        document.getElementsByClassName('infill-editor-cursor')[0]?.scrollIntoView({
+        if(scroll_into_view) document.getElementsByClassName('infill-editor-cursor')[0]?.scrollIntoView({
             "behavior": "instant",
             "block": "nearest",
             "inline": "center"
@@ -576,10 +717,14 @@ export class Editor {
         
     }
 
-    #editor_scroll(e: Event) {
+    #editor_scroll = (e: Event) => {
         if(this.#selection !== null && this.#selection.visible) this.#selection.update_render();
         console.log('HELLO');
     }
+
+    #prevent_focus_loss = (e: Event) => {
+        e.preventDefault(); // Stop mobile from losing focus
+    } 
 
     // ==========================================================================================================================================
     // ------------------------------------------------------------------------------------------------------------------------------------------
@@ -587,7 +732,7 @@ export class Editor {
     // ------------------------------------------------------------------------------------------------------------------------------------------
     // ==========================================================================================================================================
 
-    #on_key_down(e: KeyboardEvent) {
+    #on_key_down = (e: KeyboardEvent) => {
 
         // ======= HELPERS =======
 
@@ -603,7 +748,7 @@ export class Editor {
         // Update render when using arrow keys        
         if((key === "arrowleft" || key === "arrowright" || key === "arrowup" || key === "arrowdown") && !(e.getModifierState('Shift') || e.getModifierState('Ctrl'))) {
             // Wait for the cursor to be moved by the browser and then update
-            window.setTimeout(() => this.#update_markdown_render(), 1);
+            window.setTimeout(() => this.#update_markdown_render(true), 1);
         }
         // ======= GENERAL SHORTCUTS =======
         
@@ -711,7 +856,7 @@ export class Editor {
 
     }
     
-    #before_input(e: InputEvent) {
+    #before_input = (e: InputEvent) => {
         const key = e.data
         if(key?.length === 1) {
             if(" -\n".includes(key)) {
@@ -748,7 +893,7 @@ export class Editor {
     //  Mouse down                            
     // -------------------------------
 
-    #editor_mouse_down(e: PointerEvent) {
+    #editor_mouse_down = (e: PointerEvent) => {
         if(e.target === null || !(e.target instanceof Node)) return;
         if(!this.#toggle_check.checked) return;
 
@@ -800,7 +945,7 @@ export class Editor {
         }
     }
 
-    #cancel_hold() {
+    #cancel_hold = () => {
         if(this.#hold_timeout === null) return;
         window.clearTimeout(this.#hold_timeout);
         this.#hold_timeout = null;
@@ -810,7 +955,7 @@ export class Editor {
     //  Mouse move                            
     // -------------------------------
 
-    #editor_mouse_move(e: PointerEvent) {
+    #editor_mouse_move = (e: PointerEvent) => {
         if(!this.#toggle_check.checked) return;
 
         // Update the selection
@@ -850,7 +995,7 @@ export class Editor {
     //  Mouse Up                            
     // -------------------------------
 
-    #editor_mouse_up(e: PointerEvent) {
+    #editor_mouse_up = (e: PointerEvent) => {
         if(!this.#toggle_check.checked) return;
         this.#selection_thumb_up(e);
 
@@ -866,6 +1011,9 @@ export class Editor {
         }
 
         if(this.#mouse_down) {
+            this.#wrapper.classList.add('hide-cursor');
+            window.setTimeout(() => this.#wrapper.classList.remove('hide-cursor'), 10);
+
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
             if(cursor !== undefined && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) this.#selection?.set_end(cursor);
 
@@ -936,7 +1084,7 @@ export class Editor {
     }
 
     // Adjust selection
-    #selection_thumb_move(e: PointerEvent) {
+    #selection_thumb_move = (e: PointerEvent) => {
         if(this.#thumb_down) {
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
 
@@ -1075,7 +1223,7 @@ export class Editor {
     //  Copy                            
     // -------------------------------
 
-    #copy_selection(e: ClipboardEvent | Clipboard) {
+    #copy_selection = (e: ClipboardEvent | Clipboard) => {
         if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
             if(e instanceof ClipboardEvent) {
@@ -1097,7 +1245,7 @@ export class Editor {
     //  Paste                            
     // -------------------------------
 
-    async #paste_selection(e: ClipboardEvent | Clipboard) {
+    #paste_selection = async (e: ClipboardEvent | Clipboard) => {
         window.setTimeout(() => this.#register_history_state(), 10);
         if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
@@ -1120,7 +1268,7 @@ export class Editor {
     //  Cut                            
     // -------------------------------
 
-    #cut_selection(e: ClipboardEvent | Clipboard) {
+    #cut_selection = (e: ClipboardEvent | Clipboard) => {
         window.setTimeout(() => this.#register_history_state(), 10);
         if(!this.#toggle_check.checked) return;
         if(this.#selection !== null && this.#selection.visible) {
@@ -1555,30 +1703,46 @@ export class Editor {
     // ------------------------------------------------------------------------------------------------------------------------------------------
     // ==========================================================================================================================================
 
-    #import_file() {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', '.txt,.md');
-        input.click();
-        input.addEventListener('change', (e) => {
-            let file = input.files?.[0];
+    #import_file = () => {
+        const input_elem = document.createElement('input');
+        input_elem.setAttribute('type', 'file');
+        input_elem.setAttribute('accept', '.txt,.md');
+        input_elem.click();
+        
+        // When a file is uploaded, read it
+        const read_imported_file = () => {
+            
+            // Open the file
+            let file = input_elem.files?.[0];
             let reader = new FileReader();
 
-            input.value = ""; // Reset for next time
+            // Reset input elem for next time
+            input_elem.value = "";
 
             if (!file) return; // Stop when there is no file
 
+            // Read the file
             reader.readAsText(file, "UTF-8");
-            reader.addEventListener('load', (e) => {
+
+            // Process the file text
+            const process_imported_file = () => {
                 const result = reader.result;
                 if(typeof result === "string") this.#input.value = result;
 
                 this.#update_markdown_render();
-            });
-        });
+
+                reader.removeEventListener('load', process_imported_file)
+                
+            }
+
+            this.#register_event_listener(reader, 'load',  process_imported_file);
+            input_elem.removeEventListener('change', read_imported_file);
+        }
+        
+        this.#register_event_listener(input_elem, 'change',  read_imported_file);   
     }
 
-    #export_file() {
+    #export_file = () => {
         const curr_date = new Date();
 
         let default_file_name = `infill_export_${curr_date.getDate()}-${curr_date.getMonth() + 1}_${curr_date.getHours()}-${curr_date.getMinutes()}.md`;
@@ -1617,7 +1781,7 @@ export class Editor {
         this.#history.redo_states = [];
     }
 
-    #undo(e: KeyboardEvent, force_enabled: boolean = false) {
+    #undo(e: Event, force_enabled: boolean = false) {
         if(!this.#toggle_check.checked && !force_enabled) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1636,7 +1800,7 @@ export class Editor {
         if(new_state !== undefined) this.set_cursor(new_state.cursor_pos);
     }
 
-    #redo(e: KeyboardEvent, force_enabled: boolean = false) {
+    #redo(e: Event, force_enabled: boolean = false) {
         if(!this.#toggle_check.checked && !force_enabled) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1708,7 +1872,25 @@ export class Editor {
         this.#wrapper.style.height = height;
     }
 
-    on_input(callback: Function) {
-        this.#input.addEventListener('input', () => callback());
+    on_input(callback: (event: InputEvent) => void) {
+        this.#register_event_listener<InputEvent>(this.#input, 'input',  callback);
+    }
+
+    destory() {
+
+        if(this.#destroyed) return;
+        this.#destroyed = true;
+
+        // Remove the resize observer
+        this.#resize_observer.disconnect();
+
+        // Remove all event listeners
+        for( const registered_event_listener of this.#registered_event_listeners) {
+            registered_event_listener.targ.removeEventListener(registered_event_listener.type, registered_event_listener.listener);
+        }
+        this.#registered_event_listeners = [];
+
+        // Remove the DOM nodes
+        this.#wrapper.remove();
     }
 }

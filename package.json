@@ -44,7 +44,7 @@
     ],
     "description": "A live in-text markdown editor powered by YAMP.",
     "dependencies": {
-        "@theblackswitch/yamp": "^0.2.0",
+        "@theblackswitch/yamp": "^0.3.0",
         "dompurify": "^3.4.14",
         "prismjs": "^1.30.0"
     }

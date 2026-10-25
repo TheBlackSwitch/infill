@@ -56,7 +56,8 @@ declare class Editor {
     }): void;
     set_markdown(value: string): void;
     resize(width: string, height: string): void;
-    on_input(callback: Function): void;
+    on_input(callback: (event: InputEvent) => void): void;
+    destory(): void;
 }
 
 export { Editor, default_options };

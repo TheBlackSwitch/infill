@@ -99,6 +99,7 @@
     left: 50%;
     transform: translate(-50%, -9px);
     text-wrap: nowrap;
+    pointer-events: none;
 }
 
 .infill-tooltip.infill-align-left::before {
@@ -604,7 +605,7 @@
     background-color: currentColor;
 }
 
-.infill-editor:focus-within .infill-editor-cursor::after {
+.infill-editor-wrapper:not(.hide-cursor) .infill-editor:focus-within .infill-editor-cursor::after {
     visibility: visible;
     opacity: 1.0;
 }
