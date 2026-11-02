@@ -1,5 +1,5 @@
 
-@import url('https://cdn.jsdelivr.net/npm/@gerhobbelt/prism-themes@1.4.1-3/themes/prism-night-owl.css');
+@import url('https://cdn.jsdelivr.net/npm/@gerhobbelt/prism-themes@1.4.1-3/themes/prism-night-owl.css') layer(prism);
 
 @layer infill-default-theme {
 

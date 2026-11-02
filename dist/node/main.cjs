@@ -244,7 +244,6 @@ var EditorSelection = class {
       const end_node = this.#cursor_pos_to_node(Math.max(this.#start, this.#end));
       if (start_node === null || end_node === null) return;
       const range = document.createRange();
-      console.log(start_node, end_node);
       range.setStart(start_node.node, start_node.offset);
       range.setEnd(end_node.node, end_node.offset);
       const parent_rect = this.#parent_element.getBoundingClientRect();
@@ -265,17 +264,17 @@ var EditorSelection = class {
         if (end === void 0 || start === void 0) return;
         const select_start_thumb = document.createElement("div");
         select_start_thumb.classList.add("infill-editor-select-thumb", "infill-start");
-        select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 1.5}px`;
+        select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 2}px`;
         select_start_thumb.style.top = `${start.top - parent_rect.top - 10}px`;
-        select_start_thumb.style.height = `${start.height * 1.5}px`;
-        select_start_thumb.style.width = `${start.height * 1.5}px`;
+        select_start_thumb.style.height = `${start.height * 2}px`;
+        select_start_thumb.style.width = `${start.height * 2}px`;
         select_start_thumb.addEventListener("pointerdown", (e) => this.#on_thumb_down(e, "start"));
         const select_end_thumb = document.createElement("div");
         select_end_thumb.classList.add("infill-editor-select-thumb", "infill-end");
         select_end_thumb.style.left = `${end.right - parent_rect.left - 20}px`;
         select_end_thumb.style.top = `${end.top - parent_rect.top - 10}px`;
-        select_end_thumb.style.height = `${end.height * 1.5}px`;
-        select_end_thumb.style.width = `${end.height * 1.5}px`;
+        select_end_thumb.style.height = `${end.height * 2}px`;
+        select_end_thumb.style.width = `${end.height * 2}px`;
         select_end_thumb.addEventListener("pointerdown", (e) => this.#on_thumb_down(e, "end"));
         this.#selection_mask.appendChild(select_start_thumb);
         this.#selection_mask.appendChild(select_end_thumb);
@@ -392,7 +391,6 @@ var Editor = class {
     for (const [option, value] of Object.entries(default_options)) {
       if (options[option] !== void 0) {
         if (typeof options[option] === "object") {
-          console.log("OBJECT");
           this.#options[option] = {};
           for (const [sub_option, value2] of Object.entries(default_options[option])) {
             if (options[option][sub_option] === void 0) {
@@ -668,10 +666,11 @@ var Editor = class {
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // ==========================================================================================================================================
   #insert_text(before_cursor, after_cursor, force_linebreak = false) {
+    this.#wrapper.classList.add("hide-cursor");
+    window.setTimeout(() => this.#wrapper.classList.remove("hide-cursor"), 10);
     let before = "";
     let after = "";
     let inside = "";
-    console.log(this.#selection);
     let select_start = 0;
     let select_end = 0;
     if (this.#selection !== null && this.#selection.visible) {
@@ -686,7 +685,6 @@ var Editor = class {
       before = this.#input.value.slice(0, cursor_pos);
       after = this.#input.value.slice(cursor_pos);
     }
-    console.log("TEST", before, after);
     const should_remove_start = before.endsWith(before_cursor) || inside.startsWith(before_cursor);
     const should_remove_end = after.startsWith(after_cursor) || inside.endsWith(after_cursor);
     if (should_remove_start) {
@@ -746,7 +744,6 @@ var Editor = class {
   #click_toggle = () => {
     window.setTimeout(() => {
       const enabled = this.#toggle_check.checked;
-      console.log("CHECK");
       if (enabled) {
         this.#wrapper.classList.remove("infill-parsing-disabled");
         window.setTimeout(() => this.set_cursor(this.#input.selectionStart, !this.#editor_had_focus), 10);
@@ -775,24 +772,21 @@ var Editor = class {
       "line_idx_map": []
     }
   };
-  #update_markdown_render = (scroll_into_view = false) => {
+  #update_markdown_render = (scroll_into_view = false, hide_cursor = false) => {
     let markdown_input = this.#input.value;
     if (!this.#toggle_check.checked) return;
     if (markdown_input.length === 0 && document.activeElement !== this.#input) {
-      markdown_input = `<span class="infill-placeholder">${this.#place_holder}</span>`;
+      markdown_input = `<i class="infill-placeholder">${this.#place_holder}</i>`;
     }
     const cursor_pos = this.#input.selectionStart;
-    markdown_input = markdown_input.slice(0, cursor_pos) + "\uE003" + markdown_input.slice(cursor_pos);
-    console.log(markdown_input);
+    if (!hide_cursor) markdown_input = markdown_input.slice(0, cursor_pos) + "\uE003" + markdown_input.slice(cursor_pos);
     this.#last_parse = this.#parser.parse(markdown_input);
     if (this.#last_parse.html === void 0) throw Error("[Infill]: whoops something went horribly wrong whilst parsing markdown. Please make an issue on github immediately.");
-    console.log(this.#last_parse.html);
     let text = import_dompurify.default.sanitize(this.#last_parse.html);
-    console.log(this.#last_parse.html);
     this.#text_display.innerHTML = text;
     import_prismjs2.default.highlightAllUnder(this.#wrapper);
-    this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll("\uE003", '<i class="infill-editor-cursor"></i>');
-    if (scroll_into_view) document.getElementsByClassName("infill-editor-cursor")[0]?.scrollIntoView({
+    this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll("\uE003", '<i class="infill-editor-cursor">\u200B</i>');
+    if (scroll_into_view || this.#text_display.querySelector("pre code .infill-editor-cursor") !== null) document.getElementsByClassName("infill-editor-cursor")[0]?.scrollIntoView({
       "behavior": "instant",
       "block": "nearest",
       "inline": "center"
@@ -800,7 +794,6 @@ var Editor = class {
   };
   #editor_scroll = (e) => {
     if (this.#selection !== null && this.#selection.visible) this.#selection.update_render();
-    console.log("HELLO");
   };
   #prevent_focus_loss = (e) => {
     e.preventDefault();
@@ -910,32 +903,45 @@ var Editor = class {
   #mouse_hold = false;
   #hold_timeout = null;
   #last_click = 0;
-  #last_click_pos = 0;
+  #last_click_pos;
+  #last_valid_cursor_pos = 0;
   // -------------------------------
   //  Mouse down                            
   // -------------------------------
   #editor_mouse_down = (e) => {
     if (e.target === null || !(e.target instanceof Node)) return;
     if (!this.#toggle_check.checked) return;
+    this.#mouse_hold = false;
     const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-    if (this.#last_click + 300 > Date.now() && this.#last_click_pos !== void 0 && cursor === this.#last_click_pos) {
+    if (cursor === void 0) {
+      if (this.#editor.contains(e.target)) {
+        this.#selection?.discard();
+        this.#selection = null;
+      }
+      return;
+    }
+    let mapped_pos = this.#map_cursor_pos(cursor);
+    if (mapped_pos === void 0) {
+      if (this.#editor.contains(e.target)) {
+        this.#selection?.discard();
+        this.#selection = null;
+      }
+      return;
+    }
+    if (this.#last_click + 300 > Date.now() && this.#last_click_pos === mapped_pos) {
       if (e.pointerType === "mouse") this.#select_word();
       this.#last_click = Date.now();
       return;
     }
     this.#last_click = Date.now();
-    this.#last_click_pos = cursor;
-    this.#mouse_hold = false;
+    this.#last_click_pos = mapped_pos;
     if (this.#selection_mask.contains(e.target)) {
       return;
     } else if (this.#editor.contains(e.target)) {
       this.#mouse_down = true;
       this.#anchor_pos = [e.clientX, e.clientY];
       this.#selection?.discard();
-      if (cursor === void 0) return this.#selection = null;
       this.#target_line_offs = null;
-      const mapped_pos = this.#map_cursor_pos(cursor);
-      if (mapped_pos === void 0) return;
       this.#selection_anchor = mapped_pos;
       this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
       if (e.pointerType !== "mouse") this.#hold_timeout = window.setTimeout(() => {
@@ -962,8 +968,17 @@ var Editor = class {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) {
         const mapped = this.#map_cursor_pos(cursor);
-        if (mapped !== void 0) this.set_cursor(mapped);
+        if (mapped !== void 0) {
+          this.set_cursor(mapped);
+          this.#last_valid_cursor_pos = mapped;
+        }
         this.#selection?.set_end(cursor);
+      }
+      if (this.#anchor_pos[0] !== void 0 && this.#anchor_pos[1] !== void 0) {
+        const sel_start = cursor_pos_from_point(this.#text_display, this.#anchor_pos[0], this.#anchor_pos[1])?.global;
+        if (sel_start !== void 0) {
+          this.#selection?.set_start(sel_start);
+        }
       }
     }
     if (this.#mouse_down && (this.#selection === null || !this.#selection.visible)) {
@@ -999,17 +1014,28 @@ var Editor = class {
       return;
     }
     if (this.#mouse_down) {
+      if (this.#anchor_pos[0] !== void 0 && this.#anchor_pos[1] !== void 0 && !(this.#selection && this.#selection.visible)) {
+        const dist = (e.clientX - this.#anchor_pos[0]) ** 2 + (e.clientY - this.#anchor_pos[1]) ** 2;
+        if (dist >= 16) {
+          this.#selection?.discard();
+          this.#mouse_down = false;
+          return;
+        }
+      }
       this.#wrapper.classList.add("hide-cursor");
       window.setTimeout(() => this.#wrapper.classList.remove("hide-cursor"), 10);
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0 && this.#input.value.length > 0) this.#selection?.set_end(cursor);
       if (cursor !== void 0) {
-        const mapped_pos = this.#map_cursor_pos(cursor);
-        if (mapped_pos !== void 0) window.setTimeout(() => this.set_cursor(mapped_pos), 10);
+        let mapped_pos = this.#map_cursor_pos(cursor);
+        if (mapped_pos !== void 0) {
+          this.set_cursor(mapped_pos);
+        }
+      } else if (this.#selection && this.#selection.visible) {
+        this.set_cursor(this.#last_valid_cursor_pos);
       } else {
-        window.setTimeout(() => this.set_cursor(this.#input.value.length), 10);
+        this.set_cursor(this.#input.value.length);
       }
-      this.#update_markdown_render();
     }
     this.#mouse_down = false;
   };
@@ -1094,12 +1120,16 @@ var Editor = class {
   }
   // Map a cursor pos from html to markdown
   #map_cursor_pos(position) {
-    return this.#last_parse.char_map.absolute_map[position];
+    const res = this.#last_parse.char_map.absolute_map[position];
+    if (res === void 0) return void 0;
+    if (res > this.#input.selectionStart) return res - 1;
+    return res;
   }
   // Map a cusor pos from markdown to html
   #inverse_map_cursor_pos(position, map = this.#last_parse.char_map.absolute_map) {
     const last_item = map[map.length - 1];
     const first_item = map[0];
+    if (position > this.#input.selectionStart) position += 1;
     let mapped = map.indexOf(position);
     if (last_item !== void 0 && position > last_item) return -1;
     if (first_item !== void 0 && position < first_item) return -1;
@@ -1259,7 +1289,6 @@ var Editor = class {
     if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    console.log("SELECT");
     if (ctrl) {
       if (this.#selection !== null && this.#selection.visible && this.#selection.end > this.#selection.start) {
         const start_line_idx = this.#get_line_idx(this.#selection.start);

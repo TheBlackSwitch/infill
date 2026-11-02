@@ -1,5 +1,5 @@
 
-@import url('https://cdn.jsdelivr.net/npm/prismjs/themes/prism-coy.min.css');
+@import url('https://cdn.jsdelivr.net/npm/prismjs/themes/prism-coy.min.css') layer(prism);
 @layer infill-default-theme {
 
     :root {

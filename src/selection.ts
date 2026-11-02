@@ -109,7 +109,7 @@ export class EditorSelection {
             if(start_node === null || end_node === null) return;
 
             const range = document.createRange();
-            console.log(start_node, end_node);
+            //console.log(start_node, end_node);
 
             range.setStart(start_node.node, start_node.offset);
             range.setEnd(end_node.node, end_node.offset);
@@ -142,10 +142,10 @@ export class EditorSelection {
 
                 const select_start_thumb = document.createElement('div');
                 select_start_thumb.classList.add('infill-editor-select-thumb', 'infill-start');
-                select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 1.5}px`;
+                select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 2}px`;
                 select_start_thumb.style.top = `${start.top - parent_rect.top - 10}px`;
-                select_start_thumb.style.height = `${start.height * 1.5}px`;
-                select_start_thumb.style.width = `${start.height * 1.5}px`;
+                select_start_thumb.style.height = `${start.height * 2}px`;
+                select_start_thumb.style.width = `${start.height * 2}px`;
                 select_start_thumb.addEventListener('pointerdown', (e) => this.#on_thumb_down(e, "start"));
 
 
@@ -153,8 +153,8 @@ export class EditorSelection {
                 select_end_thumb.classList.add('infill-editor-select-thumb', 'infill-end');
                 select_end_thumb.style.left = `${end.right - parent_rect.left - 20}px`;
                 select_end_thumb.style.top = `${end.top - parent_rect.top - 10}px`;
-                select_end_thumb.style.height = `${end.height * 1.5}px`;
-                select_end_thumb.style.width = `${end.height * 1.5}px`;
+                select_end_thumb.style.height = `${end.height * 2}px`;
+                select_end_thumb.style.width = `${end.height * 2}px`;
                 select_end_thumb.addEventListener('pointerdown', (e) => this.#on_thumb_down(e, "end"));
 
                 this.#selection_mask.appendChild(select_start_thumb);

@@ -1546,7 +1546,7 @@ __export(main_exports, {
   Highlight: () => Highlight,
   HorizontalRule: () => HorizontalRule,
   Image: () => Image,
-  InlineModifer: () => InlineModifer,
+  InlineModifier: () => InlineModifier,
   InlineParser: () => InlineParser,
   IsTypeOf: () => IsTypeOf,
   Link: () => Link,
@@ -1640,7 +1640,7 @@ var CharMap = class _CharMap {
   constructor(width_map) {
     this.width_map = width_map;
   }
-  static from_cache(lines, cached) {
+  static from_cache(lines, cached, options) {
     let width_map = new Array(lines.length);
     let is_parent_cached = false;
     for (let line_idx = 0; line_idx < lines.length; line_idx++) {
@@ -1649,7 +1649,8 @@ var CharMap = class _CharMap {
       if ((type === "node" || type === "extend" && is_parent_cached) && cached.char_map.length > line_idx) {
         curr_map = cached.char_map[line_idx];
       } else {
-        const len = lines[line_idx]?.length;
+        const curr_line = lines[line_idx];
+        const len = curr_line?.length;
         curr_map = new Array(len);
         curr_map.fill(0);
       }
@@ -1821,19 +1822,19 @@ var InlineParser = class extends Parser {
     return [];
   }
 };
-var InlineModifer = class _InlineModifer {
+var InlineModifier = class _InlineModifier {
   #index = 0;
   #data;
   #params = {};
   #modify_char_map = true;
   static new_insert(idx, value, modify_char_map = false) {
-    return new _InlineModifer({ "type": "insert", "value": value }, idx, modify_char_map);
+    return new _InlineModifier({ "type": "insert", "value": value }, idx, modify_char_map);
   }
   static new_delete(idx, count, modify_char_map = false) {
-    return new _InlineModifer({ "type": "delete", "count": count }, idx, modify_char_map);
+    return new _InlineModifier({ "type": "delete", "count": count }, idx, modify_char_map);
   }
   static new_replace(idx, count, new_value, modify_char_map = false) {
-    return new _InlineModifer({ "type": "replace", "value": new_value, "count": count }, idx, modify_char_map);
+    return new _InlineModifier({ "type": "replace", "value": new_value, "count": count }, idx, modify_char_map);
   }
   get index() {
     return this.#index;
@@ -1871,7 +1872,7 @@ var SingleLineParser = class extends Parser {
           if (result == void 0) throw Error(`[YAMP]: Failed to run function parse_inline(), method parse() of parser ${parser.constructor.name} returned an unexpected value. Expected type Array[InlineParser].`);
           if (result.length === 0) continue;
           for (const res of result) {
-            if (!(res instanceof InlineModifer)) throw Error(`[YAMP]: Failed to run function parse_inline(), method parse() of parser ${parser.constructor.name} returned an unexpected value. Expected type Array[InlineParser].`);
+            if (!(res instanceof InlineModifier)) throw Error(`[YAMP]: Failed to run function parse_inline(), method parse() of parser ${parser.constructor.name} returned an unexpected value. Expected type Array[InlineParser].`);
           }
           modifiers.push(...result);
         }
@@ -2197,14 +2198,14 @@ var Emphasis = class extends InlineParser {
         let end_pos = i - Math.max(0, closing_count - final_count);
         if (char !== "*") end_pos -= 1;
         if (final_count === 1) {
-          modifiers.push(InlineModifer.new_replace(start_pos, final_count, "<em>", true));
-          modifiers.push(InlineModifer.new_replace(end_pos - final_count + 1, final_count, "</em>", true));
+          modifiers.push(InlineModifier.new_replace(start_pos, final_count, "<em>", true));
+          modifiers.push(InlineModifier.new_replace(end_pos - final_count + 1, final_count, "</em>", true));
         } else if (final_count === 2) {
-          modifiers.push(InlineModifer.new_replace(start_pos, final_count, "<strong>", true));
-          modifiers.push(InlineModifer.new_replace(end_pos - final_count + 1, final_count, "</strong>", true));
+          modifiers.push(InlineModifier.new_replace(start_pos, final_count, "<strong>", true));
+          modifiers.push(InlineModifier.new_replace(end_pos - final_count + 1, final_count, "</strong>", true));
         } else if (final_count >= 3) {
-          modifiers.push(InlineModifer.new_replace(start_pos, final_count, "<em><strong>", true));
-          modifiers.push(InlineModifer.new_replace(end_pos - final_count + 1, final_count, "</strong></em>", true));
+          modifiers.push(InlineModifier.new_replace(start_pos, final_count, "<em><strong>", true));
+          modifiers.push(InlineModifier.new_replace(end_pos - final_count + 1, final_count, "</strong></em>", true));
         }
         opening_count = 0;
         closing_count = 0;
@@ -2262,14 +2263,14 @@ var UnderscoreEmphasis = class extends InlineParser {
           let end_pos = i - Math.max(0, closing_count - final_count);
           if (char !== "_") end_pos -= 1;
           if (final_count === 1) {
-            modifiers.push(InlineModifer.new_replace(start_pos, final_count, "<em>", true));
-            modifiers.push(InlineModifer.new_replace(end_pos - final_count + 1, final_count, "</em>", true));
+            modifiers.push(InlineModifier.new_replace(start_pos, final_count, "<em>", true));
+            modifiers.push(InlineModifier.new_replace(end_pos - final_count + 1, final_count, "</em>", true));
           } else if (final_count === 2) {
-            modifiers.push(InlineModifer.new_replace(start_pos, final_count, "<strong>", true));
-            modifiers.push(InlineModifer.new_replace(end_pos - final_count + 1, final_count, "</strong>", true));
+            modifiers.push(InlineModifier.new_replace(start_pos, final_count, "<strong>", true));
+            modifiers.push(InlineModifier.new_replace(end_pos - final_count + 1, final_count, "</strong>", true));
           } else if (final_count >= 3) {
-            modifiers.push(InlineModifer.new_replace(start_pos, final_count, "<em><strong>", true));
-            modifiers.push(InlineModifer.new_replace(end_pos - final_count + 1, final_count, "</strong></em>", true));
+            modifiers.push(InlineModifier.new_replace(start_pos, final_count, "<em><strong>", true));
+            modifiers.push(InlineModifier.new_replace(end_pos - final_count + 1, final_count, "</strong></em>", true));
           }
           opening_count = 0;
           closing_count = 0;
@@ -2464,8 +2465,8 @@ var Code = class extends InlineParser {
         if (ending.count === backtick.count) {
           if (backtick.count > 1) CHAR_MAP.discard_immediately(char_map_line, char_map_idx + ending.start + 1, backtick.count - 1);
           if (backtick.count > 1) CHAR_MAP.discard_immediately(char_map_line, char_map_idx + backtick.start + backtick.count - 1, backtick.count - 1);
-          modifiers.push(InlineModifer.new_replace(ending.start, backtick.count, "</code>\u200B"));
-          modifiers.push(InlineModifer.new_replace(backtick.start, backtick.count, "<code>\u200B"));
+          modifiers.push(InlineModifier.new_replace(ending.start, backtick.count, "</code>\u200B"));
+          modifiers.push(InlineModifier.new_replace(backtick.start, backtick.count, "<code>\u200B"));
           i = si;
           success = true;
           break;
@@ -2529,8 +2530,8 @@ var Link = class extends InlineParser {
         }
         let title = link_part.slice(title_start + 1, link_part.length - 1);
         let link_ = link_part.slice(0, title_start - 1);
-        modifiers.push(InlineModifer.new_replace(i, 1, `<a href="${link_}" class="link" title="${title}">`, true));
-        modifiers.push(InlineModifer.new_replace(i + text_part.length + 1, 3 + link_part.length, "</a>", true));
+        modifiers.push(InlineModifier.new_replace(i, 1, `<a href="${link_}" class="link" title="${title}">`, true));
+        modifiers.push(InlineModifier.new_replace(i + text_part.length + 1, 3 + link_part.length, "</a>", true));
       } else if (link_part_done && !text_part_open || (link_part_open || text_part_open) && !(StringHelper.is_valid_char(char) || StringHelper.is_whitespace(char))) {
         link_part_done = 0;
         link_part_open = 0;
@@ -2592,7 +2593,7 @@ var Image = class extends InlineParser {
         }
         let title = image_part.slice(title_start + 1, image_part.length - 1);
         let image_source = image_part.slice(0, title_start - 1);
-        modifiers.push(InlineModifer.new_replace(i - 1, text_part.length + image_part.length + 5, `<img src="${image_source}" title="${title}" alt="${text_part}">`, true));
+        modifiers.push(InlineModifier.new_replace(i - 1, text_part.length + image_part.length + 5, `<img src="${image_source}" title="${title}" alt="${text_part}">`, true));
       } else if (image_part_done && !text_part_open || (image_part_open || text_part_open) && !(StringHelper.is_valid_char(char) || StringHelper.is_whitespace(char))) {
         image_part_done = false;
         image_part_open = false;
@@ -2891,8 +2892,8 @@ var Strikethrough = class extends InlineParser {
         let ending = squiggles[si];
         if (!ending) continue;
         if (ending.count === squiggle.count) {
-          modifiers.push(InlineModifer.new_replace(ending.start, squiggle.count, "</s>", true));
-          modifiers.push(InlineModifer.new_replace(squiggle.start, squiggle.count, "<s>", true));
+          modifiers.push(InlineModifier.new_replace(ending.start, squiggle.count, "</s>", true));
+          modifiers.push(InlineModifier.new_replace(squiggle.start, squiggle.count, "<s>", true));
           i = si;
           success = true;
           break;
@@ -2958,8 +2959,8 @@ var EscapeIncompleteHtml = class extends InlineParser {
             if (found_idx === null) {
               let curr_tag = stack[stack.length - 1];
               if (!curr_tag) continue;
-              modifiers.push(InlineModifer.new_replace(curr_tag.start_location, 1, "&lt;"));
-              modifiers.push(InlineModifer.new_replace(curr_tag.start_location + curr_tag.full_text.length + 1, 1, "&gt;"));
+              modifiers.push(InlineModifier.new_replace(curr_tag.start_location, 1, "&lt;"));
+              modifiers.push(InlineModifier.new_replace(curr_tag.start_location + curr_tag.full_text.length + 1, 1, "&gt;"));
               stack.splice(stack.length - 1, 1);
             } else {
               const mods = this.close_html_tags(stack[found_idx], stack[stack.length - 1], stack, input, CHAR_MAP, char_map_line);
@@ -3018,8 +3019,8 @@ var EscapeIncompleteHtml = class extends InlineParser {
     }
     stack.sort((a, b) => a !== void 0 && b !== void 0 ? b.start_location - a.start_location : 0);
     for (const entry of stack) {
-      if (entry) modifiers.push(InlineModifer.new_replace(entry.start_location, 1, "&lt;"));
-      if (entry && entry.got_closing_bracket) modifiers.push(InlineModifer.new_replace(entry.start_location + entry.full_text.length + 1, 1, "&gt;"));
+      if (entry) modifiers.push(InlineModifier.new_replace(entry.start_location, 1, "&lt;"));
+      if (entry && entry.got_closing_bracket) modifiers.push(InlineModifier.new_replace(entry.start_location + entry.full_text.length + 1, 1, "&gt;"));
     }
     for (let i = 0; i < input.length; i++) {
       let char = input.charAt(i);
@@ -3037,7 +3038,7 @@ var EscapeIncompleteHtml = class extends InlineParser {
           }
         }
         if (!success) {
-          modifiers.push(InlineModifer.new_replace(i, 1, "&amp;"));
+          modifiers.push(InlineModifier.new_replace(i, 1, "&amp;"));
         }
       }
     }
@@ -3047,15 +3048,15 @@ var EscapeIncompleteHtml = class extends InlineParser {
         switch (input.charAt(i)) {
           case "<":
             CHAR_MAP.discard_immediately(char_map_line, char_map_idx + i - 1, 1);
-            modifiers.push(InlineModifer.new_replace(i - 1, 2, "&lt;"));
+            modifiers.push(InlineModifier.new_replace(i - 1, 2, "&lt;"));
             break;
           case ">":
             CHAR_MAP.discard_immediately(char_map_line, char_map_idx + i - 1, 1);
-            modifiers.push(InlineModifer.new_replace(i - 1, 2, "&gt;"));
+            modifiers.push(InlineModifier.new_replace(i - 1, 2, "&gt;"));
             break;
           case "&":
             CHAR_MAP.discard_immediately(char_map_line, char_map_idx + i - 1, 1);
-            modifiers.push(InlineModifer.new_replace(i - 1, 2, "&amp;"));
+            modifiers.push(InlineModifier.new_replace(i - 1, 2, "&amp;"));
             break;
         }
       }
@@ -3075,11 +3076,11 @@ var EscapeIncompleteHtml = class extends InlineParser {
       stack.splice(stack.length - 2, 2);
       let next_char = input.charAt(opening.start_location + opening.full_text.length + 2);
       if (next_char === "\n") {
-        modifiers.push(InlineModifer.new_delete(opening.start_location + opening.full_text.length + 2, 1, true));
+        modifiers.push(InlineModifier.new_delete(opening.start_location + opening.full_text.length + 2, 1, true));
       }
       next_char = input.charAt(closing.start_location + closing.full_text.length + 2);
       if (next_char === "\n") {
-        modifiers.push(InlineModifer.new_delete(closing.start_location + closing.full_text.length + 2, 1, true));
+        modifiers.push(InlineModifier.new_delete(closing.start_location + closing.full_text.length + 2, 1, true));
       }
       return modifiers;
     }
@@ -3118,8 +3119,8 @@ var Color = class extends InlineParser {
           color_done = false;
           continue;
         }
-        modifiers.push(InlineModifer.new_replace(color_start, color_end - color_start + 1, `<span style="color: ${color_part};">`, true));
-        modifiers.push(InlineModifer.new_replace(i, 1, "</span>", true));
+        modifiers.push(InlineModifier.new_replace(color_start, color_end - color_start + 1, `<span style="color: ${color_part};">`, true));
+        modifiers.push(InlineModifier.new_replace(i, 1, "</span>", true));
       } else if (color_opened && !color_done && !StringHelper.is_text_char(char) && char !== "#") {
         color_opened = false;
       }
@@ -3163,8 +3164,8 @@ var Highlight = class extends InlineParser {
         if (ending.count === backtick.count) {
           if (backtick.count > 1) CHAR_MAP.discard_immediately(char_map_line, char_map_idx + ending.start + 1, backtick.count - 1);
           if (backtick.count > 1) CHAR_MAP.discard_immediately(char_map_line, char_map_idx + backtick.start + backtick.count - 1, backtick.count - 1);
-          modifiers.push(InlineModifer.new_replace(ending.start, backtick.count, "</mark>\u200B"));
-          modifiers.push(InlineModifer.new_replace(backtick.start, backtick.count, "<mark>\u200B"));
+          modifiers.push(InlineModifier.new_replace(ending.start, backtick.count, "</mark>\u200B"));
+          modifiers.push(InlineModifier.new_replace(backtick.start, backtick.count, "<mark>\u200B"));
           i = si;
           success = true;
           break;
@@ -3210,8 +3211,8 @@ var Underlined = class extends InlineParser {
         let ending = equal_signs[si];
         if (!ending) continue;
         if (ending.count === squiggle.count) {
-          modifiers.push(InlineModifer.new_replace(ending.start, squiggle.count, "</u>", true));
-          modifiers.push(InlineModifer.new_replace(squiggle.start, squiggle.count, "<u>", true));
+          modifiers.push(InlineModifier.new_replace(ending.start, squiggle.count, "</u>", true));
+          modifiers.push(InlineModifier.new_replace(squiggle.start, squiggle.count, "<u>", true));
           i = si;
           success = true;
           break;
@@ -3254,8 +3255,10 @@ var default_options = {
   // Put a linebreak at the end of every line, even <h1>text<br></h1>. This is also useful for carret position
   "finalize_spaces": true,
   // Determines wheter spaces will be replaced with &nbsp; so they always show a difference
-  "debug": false
+  "debug": false,
   // Enable any debug logging to the console
+  "ignore_cursor_on_charmap": false
+  // Remove the cursor as a character from the char map
 };
 var YAMP = class {
   #final_options = {};
@@ -3301,7 +3304,7 @@ var YAMP = class {
     let cached = this.#parse_cache(lines, this.#final_options);
     if (this.#final_options?.debug) console.log("CACHED:", cached);
     if (this.#final_options?.debug) console.log("CACHE BEFORE CHARMAP", structuredClone(this.#cache));
-    let CHAR_MAP = CharMap.from_cache(lines, cached);
+    let CHAR_MAP = CharMap.from_cache(lines, cached, this.#final_options);
     if (this.#final_options?.debug) console.log("CACHE", structuredClone(this.#cache));
     const ast = this.#gen_ast(lines, cached, CHAR_MAP, this.#parsers_sorted, this.#final_options);
     if (this.#final_options?.debug) console.log("CACHE", structuredClone(this.#cache));
@@ -5758,7 +5761,6 @@ var EditorSelection = class {
       const end_node = this.#cursor_pos_to_node(Math.max(this.#start, this.#end));
       if (start_node === null || end_node === null) return;
       const range = document.createRange();
-      console.log(start_node, end_node);
       range.setStart(start_node.node, start_node.offset);
       range.setEnd(end_node.node, end_node.offset);
       const parent_rect = this.#parent_element.getBoundingClientRect();
@@ -5779,17 +5781,17 @@ var EditorSelection = class {
         if (end === void 0 || start === void 0) return;
         const select_start_thumb = document.createElement("div");
         select_start_thumb.classList.add("infill-editor-select-thumb", "infill-start");
-        select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 1.5}px`;
+        select_start_thumb.style.left = `${start.left - parent_rect.left - start.height * 2}px`;
         select_start_thumb.style.top = `${start.top - parent_rect.top - 10}px`;
-        select_start_thumb.style.height = `${start.height * 1.5}px`;
-        select_start_thumb.style.width = `${start.height * 1.5}px`;
+        select_start_thumb.style.height = `${start.height * 2}px`;
+        select_start_thumb.style.width = `${start.height * 2}px`;
         select_start_thumb.addEventListener("pointerdown", (e) => this.#on_thumb_down(e, "start"));
         const select_end_thumb = document.createElement("div");
         select_end_thumb.classList.add("infill-editor-select-thumb", "infill-end");
         select_end_thumb.style.left = `${end.right - parent_rect.left - 20}px`;
         select_end_thumb.style.top = `${end.top - parent_rect.top - 10}px`;
-        select_end_thumb.style.height = `${end.height * 1.5}px`;
-        select_end_thumb.style.width = `${end.height * 1.5}px`;
+        select_end_thumb.style.height = `${end.height * 2}px`;
+        select_end_thumb.style.width = `${end.height * 2}px`;
         select_end_thumb.addEventListener("pointerdown", (e) => this.#on_thumb_down(e, "end"));
         this.#selection_mask.appendChild(select_start_thumb);
         this.#selection_mask.appendChild(select_end_thumb);
@@ -5905,7 +5907,6 @@ var Editor = class {
     for (const [option, value] of Object.entries(default_options2)) {
       if (options[option] !== void 0) {
         if (typeof options[option] === "object") {
-          console.log("OBJECT");
           this.#options[option] = {};
           for (const [sub_option, value2] of Object.entries(default_options2[option])) {
             if (options[option][sub_option] === void 0) {
@@ -6181,10 +6182,11 @@ var Editor = class {
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // ==========================================================================================================================================
   #insert_text(before_cursor, after_cursor, force_linebreak = false) {
+    this.#wrapper.classList.add("hide-cursor");
+    window.setTimeout(() => this.#wrapper.classList.remove("hide-cursor"), 10);
     let before = "";
     let after = "";
     let inside = "";
-    console.log(this.#selection);
     let select_start = 0;
     let select_end = 0;
     if (this.#selection !== null && this.#selection.visible) {
@@ -6199,7 +6201,6 @@ var Editor = class {
       before = this.#input.value.slice(0, cursor_pos);
       after = this.#input.value.slice(cursor_pos);
     }
-    console.log("TEST", before, after);
     const should_remove_start = before.endsWith(before_cursor) || inside.startsWith(before_cursor);
     const should_remove_end = after.startsWith(after_cursor) || inside.endsWith(after_cursor);
     if (should_remove_start) {
@@ -6259,7 +6260,6 @@ var Editor = class {
   #click_toggle = () => {
     window.setTimeout(() => {
       const enabled = this.#toggle_check.checked;
-      console.log("CHECK");
       if (enabled) {
         this.#wrapper.classList.remove("infill-parsing-disabled");
         window.setTimeout(() => this.set_cursor(this.#input.selectionStart, !this.#editor_had_focus), 10);
@@ -6288,24 +6288,21 @@ var Editor = class {
       "line_idx_map": []
     }
   };
-  #update_markdown_render = (scroll_into_view = false) => {
+  #update_markdown_render = (scroll_into_view = false, hide_cursor = false) => {
     let markdown_input = this.#input.value;
     if (!this.#toggle_check.checked) return;
     if (markdown_input.length === 0 && document.activeElement !== this.#input) {
-      markdown_input = `<span class="infill-placeholder">${this.#place_holder}</span>`;
+      markdown_input = `<i class="infill-placeholder">${this.#place_holder}</i>`;
     }
     const cursor_pos = this.#input.selectionStart;
-    markdown_input = markdown_input.slice(0, cursor_pos) + "\uE003" + markdown_input.slice(cursor_pos);
-    console.log(markdown_input);
+    if (!hide_cursor) markdown_input = markdown_input.slice(0, cursor_pos) + "\uE003" + markdown_input.slice(cursor_pos);
     this.#last_parse = this.#parser.parse(markdown_input);
     if (this.#last_parse.html === void 0) throw Error("[Infill]: whoops something went horribly wrong whilst parsing markdown. Please make an issue on github immediately.");
-    console.log(this.#last_parse.html);
     let text2 = purify_default.sanitize(this.#last_parse.html);
-    console.log(this.#last_parse.html);
     this.#text_display.innerHTML = text2;
     import_prismjs2.default.highlightAllUnder(this.#wrapper);
-    this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll("\uE003", '<i class="infill-editor-cursor"></i>');
-    if (scroll_into_view) document.getElementsByClassName("infill-editor-cursor")[0]?.scrollIntoView({
+    this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll("\uE003", '<i class="infill-editor-cursor">\u200B</i>');
+    if (scroll_into_view || this.#text_display.querySelector("pre code .infill-editor-cursor") !== null) document.getElementsByClassName("infill-editor-cursor")[0]?.scrollIntoView({
       "behavior": "instant",
       "block": "nearest",
       "inline": "center"
@@ -6313,7 +6310,6 @@ var Editor = class {
   };
   #editor_scroll = (e) => {
     if (this.#selection !== null && this.#selection.visible) this.#selection.update_render();
-    console.log("HELLO");
   };
   #prevent_focus_loss = (e) => {
     e.preventDefault();
@@ -6423,32 +6419,45 @@ var Editor = class {
   #mouse_hold = false;
   #hold_timeout = null;
   #last_click = 0;
-  #last_click_pos = 0;
+  #last_click_pos;
+  #last_valid_cursor_pos = 0;
   // -------------------------------
   //  Mouse down                            
   // -------------------------------
   #editor_mouse_down = (e) => {
     if (e.target === null || !(e.target instanceof Node)) return;
     if (!this.#toggle_check.checked) return;
+    this.#mouse_hold = false;
     const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
-    if (this.#last_click + 300 > Date.now() && this.#last_click_pos !== void 0 && cursor === this.#last_click_pos) {
+    if (cursor === void 0) {
+      if (this.#editor.contains(e.target)) {
+        this.#selection?.discard();
+        this.#selection = null;
+      }
+      return;
+    }
+    let mapped_pos = this.#map_cursor_pos(cursor);
+    if (mapped_pos === void 0) {
+      if (this.#editor.contains(e.target)) {
+        this.#selection?.discard();
+        this.#selection = null;
+      }
+      return;
+    }
+    if (this.#last_click + 300 > Date.now() && this.#last_click_pos === mapped_pos) {
       if (e.pointerType === "mouse") this.#select_word();
       this.#last_click = Date.now();
       return;
     }
     this.#last_click = Date.now();
-    this.#last_click_pos = cursor;
-    this.#mouse_hold = false;
+    this.#last_click_pos = mapped_pos;
     if (this.#selection_mask.contains(e.target)) {
       return;
     } else if (this.#editor.contains(e.target)) {
       this.#mouse_down = true;
       this.#anchor_pos = [e.clientX, e.clientY];
       this.#selection?.discard();
-      if (cursor === void 0) return this.#selection = null;
       this.#target_line_offs = null;
-      const mapped_pos = this.#map_cursor_pos(cursor);
-      if (mapped_pos === void 0) return;
       this.#selection_anchor = mapped_pos;
       this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
       if (e.pointerType !== "mouse") this.#hold_timeout = window.setTimeout(() => {
@@ -6475,8 +6484,17 @@ var Editor = class {
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0) {
         const mapped = this.#map_cursor_pos(cursor);
-        if (mapped !== void 0) this.set_cursor(mapped);
+        if (mapped !== void 0) {
+          this.set_cursor(mapped);
+          this.#last_valid_cursor_pos = mapped;
+        }
         this.#selection?.set_end(cursor);
+      }
+      if (this.#anchor_pos[0] !== void 0 && this.#anchor_pos[1] !== void 0) {
+        const sel_start = cursor_pos_from_point(this.#text_display, this.#anchor_pos[0], this.#anchor_pos[1])?.global;
+        if (sel_start !== void 0) {
+          this.#selection?.set_start(sel_start);
+        }
       }
     }
     if (this.#mouse_down && (this.#selection === null || !this.#selection.visible)) {
@@ -6512,17 +6530,28 @@ var Editor = class {
       return;
     }
     if (this.#mouse_down) {
+      if (this.#anchor_pos[0] !== void 0 && this.#anchor_pos[1] !== void 0 && !(this.#selection && this.#selection.visible)) {
+        const dist = (e.clientX - this.#anchor_pos[0]) ** 2 + (e.clientY - this.#anchor_pos[1]) ** 2;
+        if (dist >= 16) {
+          this.#selection?.discard();
+          this.#mouse_down = false;
+          return;
+        }
+      }
       this.#wrapper.classList.add("hide-cursor");
       window.setTimeout(() => this.#wrapper.classList.remove("hide-cursor"), 10);
       const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
       if (cursor !== void 0 && this.#input.value.length > 0) this.#selection?.set_end(cursor);
       if (cursor !== void 0) {
-        const mapped_pos = this.#map_cursor_pos(cursor);
-        if (mapped_pos !== void 0) window.setTimeout(() => this.set_cursor(mapped_pos), 10);
+        let mapped_pos = this.#map_cursor_pos(cursor);
+        if (mapped_pos !== void 0) {
+          this.set_cursor(mapped_pos);
+        }
+      } else if (this.#selection && this.#selection.visible) {
+        this.set_cursor(this.#last_valid_cursor_pos);
       } else {
-        window.setTimeout(() => this.set_cursor(this.#input.value.length), 10);
+        this.set_cursor(this.#input.value.length);
       }
-      this.#update_markdown_render();
     }
     this.#mouse_down = false;
   };
@@ -6607,12 +6636,16 @@ var Editor = class {
   }
   // Map a cursor pos from html to markdown
   #map_cursor_pos(position) {
-    return this.#last_parse.char_map.absolute_map[position];
+    const res = this.#last_parse.char_map.absolute_map[position];
+    if (res === void 0) return void 0;
+    if (res > this.#input.selectionStart) return res - 1;
+    return res;
   }
   // Map a cusor pos from markdown to html
   #inverse_map_cursor_pos(position, map = this.#last_parse.char_map.absolute_map) {
     const last_item = map[map.length - 1];
     const first_item = map[0];
+    if (position > this.#input.selectionStart) position += 1;
     let mapped = map.indexOf(position);
     if (last_item !== void 0 && position > last_item) return -1;
     if (first_item !== void 0 && position < first_item) return -1;
@@ -6772,7 +6805,6 @@ var Editor = class {
     if ((this.#selection === null || !this.#selection.visible) && !this.#editor.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    console.log("SELECT");
     if (ctrl) {
       if (this.#selection !== null && this.#selection.visible && this.#selection.end > this.#selection.start) {
         const start_line_idx = this.#get_line_idx(this.#selection.start);

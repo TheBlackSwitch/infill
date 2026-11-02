@@ -4,12 +4,4 @@ import * as Infill from "./infill/main.js"
 // Awesome right?
 
 let editor_parent = document.getElementById('editor-wrapper');
-let editor = new Infill.Editor(editor_parent, {
-    "nav": {
-        "header": true
-    }
-}, "100%", "70vh");
-
-editor.on_input(() => {
-    console.log('Hello world');
-});
+let editor = new Infill.Editor(editor_parent, {}, "100%", "70vh");

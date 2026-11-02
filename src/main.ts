@@ -143,7 +143,7 @@ export class Editor {
                 
                 // Yup this is cursed. Instead of complaining, make a pull request that fixes this mess
                 if(typeof options[option] === "object") {
-                    console.log("OBJECT");
+                    //console.log("OBJECT");
                     this.#options[option] = {};
                     for(const [sub_option, value] of Object.entries(default_options[option])) {
                         if(options[option][sub_option] === undefined) {
@@ -522,11 +522,14 @@ export class Editor {
 
     #insert_text(before_cursor: string, after_cursor: string, force_linebreak: boolean = false) {
         
+        this.#wrapper.classList.add('hide-cursor');
+        window.setTimeout(() => this.#wrapper.classList.remove('hide-cursor'), 10);
+
         let before = "";
         let after = "";
         let inside = "";
 
-        console.log(this.#selection);
+        //console.log(this.#selection);
         
         // Split the text into parts depending on the cursor / selection
         let select_start: number | undefined = 0;
@@ -548,7 +551,7 @@ export class Editor {
             after = this.#input.value.slice(cursor_pos);
         }
 
-        console.log("TEST", before, after);
+        //console.log("TEST", before, after);
 
         // Remove the styling instead of duplicating it
         const should_remove_start = before.endsWith(before_cursor) || inside.startsWith(before_cursor);
@@ -639,7 +642,7 @@ export class Editor {
         window.setTimeout(() => {
             const enabled = this.#toggle_check.checked;
 
-            console.log('CHECK');
+            //console.log('CHECK');
 
             if(enabled) {
                 this.#wrapper.classList.remove('infill-parsing-disabled');
@@ -673,42 +676,42 @@ export class Editor {
         }
     };
 
-    #update_markdown_render = (scroll_into_view: boolean = false) => {
+    #update_markdown_render = (scroll_into_view: boolean = false, hide_cursor: boolean = false) => {
         let markdown_input = this.#input.value;
 
         if(! this.#toggle_check.checked) return;
 
         if(markdown_input.length === 0 && document.activeElement !== this.#input) {
-            markdown_input = `<span class="infill-placeholder">${this.#place_holder}</span>`;
+            markdown_input = `<i class="infill-placeholder">${this.#place_holder}</i>`;
         }
 
         // Insert a cursor
         const cursor_pos = this.#input.selectionStart;
-        markdown_input = markdown_input.slice(0, cursor_pos) + '\uE003' + markdown_input.slice(cursor_pos);
+        if(!hide_cursor) markdown_input = markdown_input.slice(0, cursor_pos) + '\uE003' + markdown_input.slice(cursor_pos);
 
         // Parse markdown
-        console.log(markdown_input);
+        //console.log(markdown_input);
 
         this.#last_parse = this.#parser.parse(markdown_input);
 
         // Please say this never happens
         if(this.#last_parse.html === undefined) throw Error("[Infill]: whoops something went horribly wrong whilst parsing markdown. Please make an issue on github immediately.");
 
-        console.log(this.#last_parse.html);
+        //console.log(this.#last_parse.html);
 
         // Sanatize html
         let text = DOMPurify.sanitize(this.#last_parse.html);
 
-        console.log(this.#last_parse.html);
-        
         this.#text_display.innerHTML = text;
 
         Prism.highlightAllUnder(this.#wrapper);
 
         // Replace the cursor character with an actual element
-        this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll('\uE003','<i class="infill-editor-cursor"></i>');
+        this.#text_display.innerHTML = this.#text_display.innerHTML.replaceAll('\uE003','<i class="infill-editor-cursor">\u200B</i>');
 
-        if(scroll_into_view) document.getElementsByClassName('infill-editor-cursor')[0]?.scrollIntoView({
+        //console.log(this.#text_display.innerHTML)
+
+        if(scroll_into_view || this.#text_display.querySelector('pre code .infill-editor-cursor') !== null) document.getElementsByClassName('infill-editor-cursor')[0]?.scrollIntoView({
             "behavior": "instant",
             "block": "nearest",
             "inline": "center"
@@ -719,7 +722,7 @@ export class Editor {
 
     #editor_scroll = (e: Event) => {
         if(this.#selection !== null && this.#selection.visible) this.#selection.update_render();
-        console.log('HELLO');
+        //console.log('HELLO');
     }
 
     #prevent_focus_loss = (e: Event) => {
@@ -887,7 +890,8 @@ export class Editor {
     #mouse_hold: boolean = false;
     #hold_timeout: number | null = null;
     #last_click: number = 0;
-    #last_click_pos: number | undefined = 0;
+    #last_click_pos: number | undefined;
+    #last_valid_cursor_pos: number = 0;
 
     // -------------------------------
     //  Mouse down                            
@@ -897,18 +901,39 @@ export class Editor {
         if(e.target === null || !(e.target instanceof Node)) return;
         if(!this.#toggle_check.checked) return;
 
+        this.#mouse_hold = false;
+
+        // Calculate the cursor pos
         const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
 
+        if(cursor === undefined) {
+            if(this.#editor.contains(e.target)) {
+                this.#selection?.discard();
+                this.#selection = null;
+            }
+            return;
+        }
+
+        let mapped_pos = this.#map_cursor_pos(cursor);
+
+        if(mapped_pos === undefined) {
+            if(this.#editor.contains(e.target)) {
+                this.#selection?.discard();
+                this.#selection = null;
+            }
+            return;
+        }
+
         // Detect double clicking
-        if(this.#last_click + 300 > Date.now() && this.#last_click_pos !== undefined && cursor === this.#last_click_pos) {
+        if(this.#last_click + 300 > Date.now() && this.#last_click_pos === mapped_pos) {
             if(e.pointerType === "mouse") this.#select_word();
             this.#last_click = Date.now();
             return;
         }
         this.#last_click = Date.now();
-        this.#last_click_pos = cursor;
+        this.#last_click_pos = mapped_pos;
 
-        this.#mouse_hold = false;
+        
 
         // Ignore clicking on any of the selection thumbs (for mobile only)
         if(this.#selection_mask.contains(e.target)) {
@@ -922,12 +947,9 @@ export class Editor {
             // discard the old selection
             this.#selection?.discard();
 
-            if(cursor === undefined) return this.#selection = null;
             this.#target_line_offs = null; // Reset the offset (used for selecting up and down)
 
             // Register a new selection
-            const mapped_pos = this.#map_cursor_pos(cursor);
-            if(mapped_pos === undefined) return;
             this.#selection_anchor = mapped_pos;
             this.#selection = new EditorSelection(this.#text_display, this.#selection_mask, cursor, cursor);
 
@@ -961,10 +983,23 @@ export class Editor {
         // Update the selection
         if(this.#mouse_down && e.pointerType === "mouse" && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) {
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+
             if(cursor !== undefined) {
                 const mapped = this.#map_cursor_pos(cursor);
-                if(mapped !== undefined) this.set_cursor(mapped)
+                if(mapped !== undefined) {
+                    this.set_cursor(mapped);
+                    this.#last_valid_cursor_pos = mapped;
+                }
                 this.#selection?.set_end(cursor);
+            }
+
+            if(this.#anchor_pos[0] !== undefined && this.#anchor_pos[1] !== undefined) {
+                const sel_start = cursor_pos_from_point(this.#text_display, this.#anchor_pos[0], this.#anchor_pos[1])?.global;
+
+                if(sel_start !== undefined) {
+                    this.#selection?.set_start(sel_start);
+                    //console.log("hello", sel_start)
+                }
             }
         }
 
@@ -1011,20 +1046,38 @@ export class Editor {
         }
 
         if(this.#mouse_down) {
+            if(this.#anchor_pos[0] !== undefined && this.#anchor_pos[1] !== undefined && !(this.#selection && this.#selection.visible)) {
+                const dist = (e.clientX - this.#anchor_pos[0])**2 + (e.clientY - this.#anchor_pos[1])**2;
+                if(dist >= 16) {
+                    //console.log('STOP');
+                    this.#selection?.discard();
+                    this.#mouse_down = false;
+                    return;
+                }
+            }
+
             this.#wrapper.classList.add('hide-cursor');
             window.setTimeout(() => this.#wrapper.classList.remove('hide-cursor'), 10);
 
             const cursor = cursor_pos_from_point(this.#text_display, e.clientX, e.clientY)?.global;
+
             if(cursor !== undefined && this.#input.value.length > 0 /* Make sure we can't select the placeholder */) this.#selection?.set_end(cursor);
 
             // Always move the position
             if(cursor !== undefined) {
-                const mapped_pos = this.#map_cursor_pos(cursor);
-                if(mapped_pos !== undefined) window.setTimeout(() => this.set_cursor(mapped_pos), 10);
+                let mapped_pos = this.#map_cursor_pos(cursor);
+
+                if(mapped_pos !== undefined) {
+                    //console.log("CLICK: ", cursor, " => ", mapped_pos, this.#last_parse.char_map);
+                    this.set_cursor(mapped_pos);
+                }
+
+            } else if(this.#selection && this.#selection.visible) {
+                this.set_cursor(this.#last_valid_cursor_pos);
+
             } else {
-                window.setTimeout(() => this.set_cursor(this.#input.value.length), 10);
+                this.set_cursor(this.#input.value.length);
             }
-            this.#update_markdown_render();
         }
         this.#mouse_down = false;
     }
@@ -1126,13 +1179,18 @@ export class Editor {
 
     // Map a cursor pos from html to markdown
     #map_cursor_pos(position: number) {
-        return this.#last_parse.char_map.absolute_map[position];
+        const res = this.#last_parse.char_map.absolute_map[position];
+        if(res === undefined) return undefined
+        if(res > this.#input.selectionStart) return res - 1
+        return res;
     }
 
     // Map a cusor pos from markdown to html
     #inverse_map_cursor_pos(position: number, map: Array<number> = this.#last_parse.char_map.absolute_map) {
         const last_item = map[map.length - 1];
         const first_item = map[0];
+
+        if(position > this.#input.selectionStart) position += 1;
 
         let mapped = map.indexOf(position);
 
@@ -1349,7 +1407,7 @@ export class Editor {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('SELECT');
+        //console.log('SELECT');
 
         if(ctrl) {
             // Collapse the selection with CTRL
@@ -1877,7 +1935,6 @@ export class Editor {
     }
 
     destory() {
-
         if(this.#destroyed) return;
         this.#destroyed = true;
 

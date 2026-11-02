@@ -1,4 +1,4 @@
-@import url('https://cdn.jsdelivr.net/npm/prismjs/themes/prism-twilight.css');
+@import url('https://cdn.jsdelivr.net/npm/prismjs/themes/prism-twilight.css') layer(prism);
 
 @layer infill-default-theme {
 
