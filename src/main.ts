@@ -112,11 +112,6 @@ export class Editor {
     #slider: HTMLInputElement;
     #toggle_check: HTMLInputElement;
 
-    #resize_observer: ResizeObserver;
-
-    #width: string;
-    #height: string;
-
     #destroyed: boolean = false;
 
     #history: {undo_states: Array<history_item>, redo_states: Array<history_item>} = {
@@ -178,24 +173,8 @@ export class Editor {
         this.#wrapper = document.createElement('div');
         this.#wrapper.classList.add('infill-editor-wrapper');
         this.#parent_element.appendChild(this.#wrapper);
-        this.#width = width;
-        this.#height = height;
         this.#wrapper.style.width = width;
         this.#wrapper.style.height = height;
-
-        this.#resize_observer = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                if (!entry.contentBoxSize) return;
-                const contentBoxSize = entry.contentBoxSize[0];
-                const width = entry.contentRect.width;
-                if(width < 620) {
-                    this.#wrapper.style.height = `calc(${this.#height} * 0.7)`;
-                } else {
-                    this.#wrapper.style.height = this.#height;
-                }
-            }
-        });
-        this.#resize_observer.observe(this.#wrapper);
 
         // ======= TOP NAV =======
         this.#nav = document.createElement('div');
@@ -1924,8 +1903,6 @@ export class Editor {
     }
 
     resize(width: string, height: string) {
-        this.#width = width;
-        this.#height = height;
         this.#wrapper.style.width = width;
         this.#wrapper.style.height = height;
     }
@@ -1937,9 +1914,6 @@ export class Editor {
     destory() {
         if(this.#destroyed) return;
         this.#destroyed = true;
-
-        // Remove the resize observer
-        this.#resize_observer.disconnect();
 
         // Remove all event listeners
         for( const registered_event_listener of this.#registered_event_listeners) {
